@@ -7,7 +7,6 @@ import { Component, HostListener, OnInit } from '@angular/core';
 })
 export class HomepageComponent implements OnInit {
   isPlaying = false;
-  background = '--img: url(../../assets/start.gif)';
   startTime = 0;
 
   constructor() {}
@@ -19,20 +18,25 @@ export class HomepageComponent implements OnInit {
     if (delta < 3200) return;
     // if not playing, play; otherwise pause
     if (!this.isPlaying) {
-      this.background = '--img: url(../../assets/play.gif)';
+      this.changeBackground('url(../../assets/play.gif)');
       this.isPlaying = true;
+      setTimeout(
+        () => this.changeBackground('url(../../assets/playing.gif)'),
+        2700
+      );
     } else {
-      this.background = '--img: url(../../assets/pause.gif)';
+      this.changeBackground('url(../../assets/pause.gif)');
       this.isPlaying = false;
+      setTimeout(
+        () => this.changeBackground('url(../../assets/start.gif)'),
+        3000
+      );
     }
     this.startTime = Date.now();
-    setTimeout(
-      () =>
-        this.isPlaying
-          ? (this.background = '--img: url(../../assets/playing.gif)')
-          : (this.background = '--img: url(../../assets/start.gif)'),
-      3200
-    );
+  }
+
+  changeBackground(img: string) {
+    document.getElementById('image').style.backgroundImage = img;
   }
 
   @HostListener('document:keydown', ['$event']) onKeydownHandler(

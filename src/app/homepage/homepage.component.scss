@@ -1,12 +1,14 @@
-.image {
-  background-image: var(--img);
+#image {
+  background-image: url("../../assets/start.gif");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  height: 100vh;
-  width: 100vw;
+  transition: background-image 0.5s ease-in-out;
 
   background-color: black;
+
+  height: 100vh;
+  width: 100vw;
 
   cursor: pointer;
 }
