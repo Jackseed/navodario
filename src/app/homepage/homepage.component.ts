@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-homepage',
@@ -33,5 +33,13 @@ export class HomepageComponent implements OnInit {
           : (this.background = '--img: url(../../assets/start.gif)'),
       3200
     );
+  }
+
+  @HostListener('document:keydown', ['$event']) onKeydownHandler(
+    event: KeyboardEvent
+  ) {
+    if (event.key === ' ') {
+      this.play();
+    }
   }
 }
