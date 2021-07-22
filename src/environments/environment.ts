@@ -3,7 +3,16 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  firebaseConfig: {
+    apiKey: 'AIzaSyBc4oEqQ_J5vJIyZys630Z3RCQpZJn2E9o',
+    authDomain: 'nova-jukebox.firebaseapp.com',
+    projectId: 'nova-jukebox',
+    storageBucket: 'nova-jukebox.appspot.com',
+    messagingSenderId: '960630257139',
+    appId: '1:960630257139:web:a068fecd4d6d13c3974e86',
+    measurementId: 'G-NTMEGQ3X5F',
+  },
 };
 
 /*

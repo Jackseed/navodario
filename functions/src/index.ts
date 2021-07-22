@@ -66,7 +66,7 @@ exports.getPlaylistTracks = functions
       })
       .catch((error: any) => console.log(error));
 
-    const allPlaylistTracks: any[] = [];
+    let allPlaylistTracks: any[] = [];
     const playlistTracksLimit = 100;
     const requestArray: any[] = [];
 
@@ -119,7 +119,7 @@ exports.getPlaylistTracks = functions
               });
             });
 
-            allPlaylistTracks.push(tracks);
+            allPlaylistTracks = allPlaylistTracks.concat(tracks);
 
             console.log(`loading batch ${index}`);
           })
@@ -131,9 +131,35 @@ exports.getPlaylistTracks = functions
       })
       .catch((err) => console.log('something went wrong.. ', err));
 
-    console.log(allPlaylistTracks);
+    saveTracks(allPlaylistTracks);
 
     res.json({
       result: `Tracks successfully saved from playlistId, total tracks: ${playlist.tracks.total}.`,
     });
   });
+
+const admin = require('firebase-admin');
+admin.initializeApp();
+
+function saveTracks(tracks: any[]): void {
+  const firebaseWriteLimit = 500;
+
+  for (let i = 0; i <= Math.floor(tracks.length / firebaseWriteLimit); i++) {
+    const bactchTracks = tracks.slice(
+      firebaseWriteLimit * i,
+      firebaseWriteLimit * (i + 1)
+    );
+    const batch = admin.firestore().batch();
+    for (const track of bactchTracks) {
+      if (track) {
+        const ref = admin.firestore().collection('tracks').doc();
+        batch.set(ref, track, { merge: true });
+      }
+    }
+
+    batch
+      .commit()
+      .then((_: any) => console.log(`batch of ${i} saved`))
+      .catch((error: any) => console.log(error));
+  }
+}
