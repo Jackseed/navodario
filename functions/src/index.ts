@@ -66,10 +66,9 @@ exports.getPlaylistTracks = functions
       })
       .catch((error: any) => console.log(error));
 
-    console.log(playlist.tracks.href);
-    let allPlaylistTracks: any[] = [];
+    const allPlaylistTracks: any[] = [];
     const playlistTracksLimit = 100;
-    let requestArray: any[] = [];
+    const requestArray: any[] = [];
 
     if (playlist) {
       // create all the requests to get the playlist tracks within API limits
@@ -116,6 +115,7 @@ exports.getPlaylistTracks = functions
                 image: item.track.album.images[0].url
                   ? item.track.album.images[0].url
                   : '',
+                nova_channel: req.body.nova,
               });
             });
 
