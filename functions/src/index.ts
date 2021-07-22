@@ -66,10 +66,7 @@ exports.getPlaylistTracks = functions
       })
       .catch((error: any) => console.log(error));
 
-    res.json({
-      result: `Tracks successfully saved from playlistId, total tracks: ${playlist.tracks.total}.`,
-    });
-    /*
+    console.log(playlist.tracks.href);
     let allPlaylistTracks: any[] = [];
     const playlistTracksLimit = 100;
     let requestArray: any[] = [];
@@ -82,7 +79,8 @@ exports.getPlaylistTracks = functions
         i++
       ) {
         const offset = i * playlistTracksLimit;
-        const url = playlist.tracks.href;
+
+        const url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
         const queryParam = `?limit=${playlistTracksLimit}&offset=${offset}`;
 
         const request = axios({
@@ -90,7 +88,6 @@ exports.getPlaylistTracks = functions
           url: `${url + queryParam}`,
           method: 'GET',
         });
-
         requestArray.push(request);
       }
     }
@@ -101,14 +98,28 @@ exports.getPlaylistTracks = functions
         return await request
           .then((response: any) => {
             const playlistTracks: any = response.data;
+            const tracks: any[] = [];
+            // extract needed track info
             playlistTracks.items.map((item: any) => {
-              return {
-                added_at: item.added_at,
-                ...item.track,
-              };
+              tracks.push({
+                added_at: item.added_at ? item.added_at : '',
+                name: item.track.name ? item.track.name : '',
+                uri: item.track.uri ? item.track.uri : '',
+                spotifyId: item.track.id ? item.track.id : '',
+                duration_ms: item.track.duration_ms
+                  ? item.track.duration_ms
+                  : null,
+                artist: item.track.artists[0].name
+                  ? item.track.artists[0].name
+                  : '',
+                album: item.track.album.name ? item.track.album.name : '',
+                image: item.track.album.images[0].url
+                  ? item.track.album.images[0].url
+                  : '',
+              });
             });
 
-            allPlaylistTracks.push(playlistTracks);
+            allPlaylistTracks.push(tracks);
 
             console.log(`loading batch ${index}`);
           })
@@ -120,13 +131,9 @@ exports.getPlaylistTracks = functions
       })
       .catch((err) => console.log('something went wrong.. ', err));
 
-    const trackIds = allPlaylistTracks.map((track) => {
-      return track.map((t: any) => t.track.id);
-    });
-
-    console.log('trackIds: ', trackIds);
+    console.log(allPlaylistTracks);
 
     res.json({
-      result: `Tracks successfully saved from playlistId ${playlistId}.`,
-    }); */
+      result: `Tracks successfully saved from playlistId, total tracks: ${playlist.tracks.total}.`,
+    });
   });
