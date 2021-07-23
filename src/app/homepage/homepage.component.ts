@@ -1,4 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
+import { AngularFireAuth } from '@angular/fire/auth';
+import { AngularFirestore } from '@angular/fire/firestore';
+import { first } from 'rxjs/operators';
 
 @Component({
   selector: 'app-homepage',
@@ -9,7 +12,10 @@ export class HomepageComponent implements OnInit {
   isPlaying = false;
   startTime = 0;
 
-  constructor() {}
+  constructor(
+    private afAuth: AngularFireAuth,
+    private afs: AngularFirestore
+  ) {}
 
   ngOnInit(): void {}
 
@@ -47,4 +53,15 @@ export class HomepageComponent implements OnInit {
     }
   }
 
+  async anonymousLogin() {
+    await this.afAuth.signInAnonymously();
+    const user = await this.afAuth.authState.pipe(first()).toPromise();
+    if (user) {
+      this.setUser(user.uid);
+    }
+  }
+
+  private setUser(id: string) {
+    this.afs.collection('users').doc(id).set({ id });
+  }
 }

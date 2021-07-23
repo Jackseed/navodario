@@ -7,6 +7,7 @@ import { HomepageComponent } from './homepage/homepage.component';
 
 import { AngularFireModule } from '@angular/fire';
 import { environment } from 'src/environments/environment';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 @NgModule({
   declarations: [AppComponent, HomepageComponent],
@@ -14,6 +15,7 @@ import { environment } from 'src/environments/environment';
     BrowserModule,
     AppRoutingModule,
     AngularFireModule.initializeApp(environment.firebaseConfig),
+    BrowserAnimationsModule,
   ],
   providers: [],
   bootstrap: [AppComponent],
