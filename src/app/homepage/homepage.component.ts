@@ -1,7 +1,9 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { AngularFireAuth } from '@angular/fire/auth';
 import { AngularFirestore } from '@angular/fire/firestore';
+import { MatDialog } from '@angular/material/dialog';
 import { first } from 'rxjs/operators';
+import { DialogComponent } from '../dialog/dialog.component';
 
 @Component({
   selector: 'app-homepage',
@@ -14,7 +16,8 @@ export class HomepageComponent implements OnInit {
 
   constructor(
     private afAuth: AngularFireAuth,
-    private afs: AngularFirestore
+    private afs: AngularFirestore,
+    public dialog: MatDialog
   ) {}
 
   ngOnInit(): void {}
@@ -51,6 +54,10 @@ export class HomepageComponent implements OnInit {
     if (event.key === ' ') {
       this.play();
     }
+  }
+
+  openDialog(): void {
+    const dialogRef = this.dialog.open(DialogComponent, {});
   }
 
   async anonymousLogin() {
