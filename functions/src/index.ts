@@ -47,7 +47,7 @@ async function getSpotifyAuthHeaders(): Promise<Object> {
   return headers;
 }
 
-/////////////////////// GET PLAYLIST LAST TRACK IDS ///////////////////////
+/////////////////////// GET PLAYLIST TRACKS ///////////////////////
 exports.getPlaylistTracks = functions
   .runWith({
     timeoutSeconds: 500,
@@ -57,6 +57,7 @@ exports.getPlaylistTracks = functions
     const playlistId = req.body.playlistId;
     let playlist: any;
 
+    // get the playlist to know total track number
     await axios({
       headers,
       url: `https://api.spotify.com/v1/playlists/${playlistId}`,
@@ -131,6 +132,7 @@ exports.getPlaylistTracks = functions
       })
       .catch((err) => console.log('something went wrong.. ', err));
 
+    // save tracks to firestore
     saveTracks(allPlaylistTracks);
 
     res.json({
