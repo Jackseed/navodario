@@ -4,13 +4,17 @@ import { DialogComponent } from '../dialog/dialog.component';
 // Angularfire
 import { AngularFireAuth } from '@angular/fire/auth';
 import { AngularFirestore } from '@angular/fire/firestore';
+import { AngularFireFunctions } from '@angular/fire/functions';
 // Rxjs
 import { Subscription } from 'rxjs';
-import { filter, first, map, tap } from 'rxjs/operators';
+import { filter, first, map, switchMap, tap } from 'rxjs/operators';
 // Flex layout
 import { MediaObserver, MediaChange } from '@angular/flex-layout';
 // Material
 import { MatDialog } from '@angular/material/dialog';
+import { environment } from 'src/environments/environment';
+import { NavigationEnd, Router } from '@angular/router';
+import { User } from '../auth/auth.model';
 
 @Component({
   selector: 'app-homepage',
@@ -23,10 +27,17 @@ export class HomepageComponent implements OnInit {
   public dialogHeight: string;
   isPlaying = false;
   startTime = 0;
+  authorizeURL = 'https://accounts.spotify.com/authorize';
+  clientId: string = environment.spotify.clientId;
+  responseType: string = environment.spotify.responseType;
+  redirectURI = environment.spotify.redirectURI;
+  scope = ['streaming', 'user-read-email', 'user-read-private'].join('%20');
 
   constructor(
+    private router: Router,
     private afAuth: AngularFireAuth,
     private afs: AngularFirestore,
+    private fns: AngularFireFunctions,
     public dialog: MatDialog,
     private mediaObserver: MediaObserver
   ) {
@@ -41,8 +52,8 @@ export class HomepageComponent implements OnInit {
           this.dialogWidth = '80vw';
           this.dialogHeight = '60vh';
         } else {
-          this.dialogWidth = '25vw';
-          this.dialogHeight = '30vh';
+          this.dialogWidth = '500px';
+          this.dialogHeight = '300px';
         }
       });
   }
@@ -53,6 +64,23 @@ export class HomepageComponent implements OnInit {
       .pipe(
         filter((user) => !!!user),
         tap((_) => this.openDialog()),
+        first()
+      )
+      .subscribe();
+
+    // if url includes a code, get an access token
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        tap((event) => {
+          if (event.url) {
+            const code = event.url.substring(event.url.indexOf('=') + 1);
+            this.getAccessToken(code);
+            // otherwise get a refresh token
+          } else {
+            this.getRefreshToken();
+          }
+        }),
         first()
       )
       .subscribe();
@@ -99,17 +127,82 @@ export class HomepageComponent implements OnInit {
       height: this.dialogHeight,
       maxHeight: this.dialogHeight,
     });
+    dialogRef.afterClosed().subscribe(async (result) => {
+      await this.anonymousLogin();
+    });
+  }
+
+  private authSpotify() {
+    this.authorizeURL += '?' + 'client_id=' + this.clientId;
+    this.authorizeURL += '&response_type=' + this.responseType;
+    this.authorizeURL += '&redirect_uri=' + this.redirectURI;
+    this.authorizeURL += '&scope=' + this.scope;
+
+    window.location.href = this.authorizeURL;
   }
 
   async anonymousLogin() {
-    await this.afAuth.signInAnonymously();
-    const user = await this.afAuth.authState.pipe(first()).toPromise();
-    if (user) {
-      this.setUser(user.uid);
-    }
+    await this.afAuth
+      .signInAnonymously()
+      .then(async (_) => {
+        console.log('log in successfully');
+        this.afAuth.authState
+          .pipe(
+            tap(async (user) => {
+              console.log('here ');
+              await this.setUser(user.uid).then((_) => this.authSpotify());
+            }),
+            first()
+          )
+          .subscribe();
+      })
+      .catch((err) => console.log('login error ', err));
   }
 
-  private setUser(id: string) {
-    this.afs.collection('users').doc(id).set({ id });
+  private setUser(id: string): Promise<void> {
+    return this.afs.collection('users').doc(id).set({ id });
+  }
+
+  private async getAccessToken(code: string) {
+    const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
+    this.afAuth.user
+      .pipe(
+        tap((user) => {
+          console.log('over here', code);
+          getTokenFunction({
+            code: code,
+            tokenType: 'access',
+            userId: user.uid,
+          })
+            .pipe(first())
+            .subscribe();
+        }),
+        first()
+      )
+      .subscribe();
+  }
+
+  private async getRefreshToken() {
+    console.log('getting refresh token');
+    const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
+    this.afAuth.user
+      .pipe(
+        switchMap((authUser) => {
+          const userDoc = this.afs.doc<User>(`users/${authUser.uid}`);
+          return userDoc.valueChanges();
+        }),
+        map((dbUser) => dbUser.tokens.refresh),
+        map((refreshToken) => {
+          console.log('refreshing token ', refreshToken);
+          return getTokenFunction({
+            refreshToken,
+            tokenType: 'refresh',
+          })
+            .pipe(first())
+            .subscribe();
+        }),
+        first()
+      )
+      .subscribe();
   }
 }
