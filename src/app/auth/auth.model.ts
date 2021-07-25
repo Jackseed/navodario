@@ -8,4 +8,5 @@ export interface User {
     addedTime?: Timestamp;
     refresh?: string;
   };
+  deviceId?: string;
 }

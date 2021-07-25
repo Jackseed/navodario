@@ -1,13 +1,14 @@
 // Angular
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { DialogComponent } from '../dialog/dialog.component';
 // Angularfire
 import { AngularFireAuth } from '@angular/fire/auth';
 import { AngularFirestore } from '@angular/fire/firestore';
 import { AngularFireFunctions } from '@angular/fire/functions';
 // Rxjs
-import { Subscription } from 'rxjs';
-import { filter, first, map, switchMap, tap } from 'rxjs/operators';
+import { Observable, of, Subscription } from 'rxjs';
+import { catchError, filter, first, map, switchMap, tap } from 'rxjs/operators';
 // Flex layout
 import { MediaObserver, MediaChange } from '@angular/flex-layout';
 // Material
@@ -16,12 +17,20 @@ import { environment } from 'src/environments/environment';
 import { NavigationEnd, Router, RouterEvent } from '@angular/router';
 import { User } from '../auth/auth.model';
 
+declare global {
+  interface Window {
+    onSpotifyWebPlaybackSDKReady(): void;
+    // @ts-ignore: Unreachable code error
+    Spotify: typeof Spotify;
+  }
+}
+
 @Component({
   selector: 'app-homepage',
   templateUrl: './homepage.component.html',
   styleUrls: ['./homepage.component.scss'],
 })
-export class HomepageComponent implements OnInit {
+export class HomepageComponent implements OnInit, OnDestroy {
   private watcher: Subscription;
   public dialogWidth: string;
   public dialogHeight: string;
@@ -39,7 +48,8 @@ export class HomepageComponent implements OnInit {
     private afs: AngularFirestore,
     private fns: AngularFireFunctions,
     public dialog: MatDialog,
-    private mediaObserver: MediaObserver
+    private mediaObserver: MediaObserver,
+    private http: HttpClient
   ) {
     this.watcher = this.mediaObserver
       .asObservable()
@@ -84,6 +94,9 @@ export class HomepageComponent implements OnInit {
         first()
       )
       .subscribe();
+
+    // instantiate the player & launch the track
+    this.initializePlayer().catch((err) => console.log(err));
   }
 
   async play() {
@@ -93,10 +106,10 @@ export class HomepageComponent implements OnInit {
     if (!this.isPlaying) {
       this.changeBackground('url(../../assets/play.gif)');
       this.isPlaying = true;
-      setTimeout(
-        () => this.changeBackground('url(../../assets/playing.gif)'),
-        2700
-      );
+      setTimeout(() => {
+        this.changeBackground('url(../../assets/playing.gif)');
+        this.playSpotify(['spotify:track:2LD2gT7gwAurzdQDQtILds']);
+      }, 2700);
     } else {
       this.changeBackground('url(../../assets/pause.gif)');
       this.isPlaying = false;
@@ -145,11 +158,9 @@ export class HomepageComponent implements OnInit {
     await this.afAuth
       .signInAnonymously()
       .then(async (_) => {
-        console.log('log in successfully');
         this.afAuth.authState
           .pipe(
             tap(async (user) => {
-              console.log('here ');
               await this.setUser(user.uid).then((_) => this.authSpotify());
             }),
             first()
@@ -168,7 +179,6 @@ export class HomepageComponent implements OnInit {
     this.afAuth.user
       .pipe(
         tap((user) => {
-          console.log('over here', code);
           getTokenFunction({
             code: code,
             tokenType: 'access',
@@ -187,7 +197,6 @@ export class HomepageComponent implements OnInit {
     this.afAuth.user
       .pipe(
         switchMap((authUser) => {
-          console.log(authUser);
           const userDoc = this.afs.doc<User>(`users/${authUser.uid}`);
           return userDoc.valueChanges();
         }),
@@ -203,5 +212,113 @@ export class HomepageComponent implements OnInit {
         first()
       )
       .subscribe();
+  }
+
+  private get user$(): Observable<User> {
+    return this.afAuth.user.pipe(
+      switchMap((authUser) => {
+        const userDoc = this.afs.doc<User>(`users/${authUser.uid}`);
+        return userDoc.valueChanges();
+      })
+    );
+  }
+
+  private async initializePlayer(): Promise<Subscription> {
+    // @ts-ignore: Unreachable code error
+    const { Player } = await this.waitForSpotifyWebPlaybackSDKToLoad();
+    const user$ = this.user$;
+
+    // instantiate the player
+    return user$
+      .pipe(
+        tap(async (user: User) => {
+          const token = user.tokens.access;
+          const player = new Player({
+            name: 'Nova Jukebox',
+            getOAuthToken: (callback) => {
+              callback(token);
+            },
+          });
+          await player.connect();
+
+          // Ready
+          player.addListener('ready', async ({ device_id }) => {
+            this.saveDeviceId(user.id, device_id).catch((err) =>
+              console.log(err)
+            );
+          });
+        }),
+        first()
+      )
+      .subscribe();
+  }
+
+  // check if window.Spotify object has either already been defined, or check until window.onSpotifyWebPlaybackSDKReady has been fired
+  public async waitForSpotifyWebPlaybackSDKToLoad() {
+    return new Promise((resolve) => {
+      if (window.Spotify) {
+        resolve(window.Spotify);
+      } else {
+        window.onSpotifyWebPlaybackSDKReady = () => {
+          resolve(window.Spotify);
+        };
+      }
+    });
+  }
+
+  private saveDeviceId(userId: string, deviceId: string): Promise<void> {
+    return this.afs.collection('users').doc(userId).update({ deviceId });
+  }
+
+  private async playSpotify(trackUris?: string[]): Promise<void> {
+    trackUris = this.limitTrackAmount(trackUris);
+    const user$ = this.user$;
+    const baseUrl = 'https://api.spotify.com/v1/me/player/play';
+
+    user$
+      .pipe(
+        switchMap((user) => {
+          const queryParam =
+            user.deviceId && trackUris ? `?device_id=${user.deviceId}` : '';
+          const body = trackUris ? { uris: trackUris } : null;
+          return this.putRequests(baseUrl, queryParam, body);
+        }),
+
+        catchError((err) => of(console.log(err))),
+
+        first()
+      )
+      .subscribe();
+  }
+
+  private limitTrackAmount(trackUris?: string[]): string[] {
+    // Not documented by spotify but it looks like there is a limit around 700 tracks
+    const urisLimit = 700;
+    if (trackUris?.length > urisLimit)
+      trackUris = trackUris.slice(0, urisLimit - 1);
+    return trackUris;
+  }
+
+  private putRequests(baseUrl: string, queryParam: string, body: Object) {
+    return this.headers$.pipe(
+      switchMap((headers) =>
+        this.http.put(`${baseUrl + queryParam}`, body, {
+          headers,
+        })
+      )
+    );
+  }
+
+  private get headers$(): Observable<HttpHeaders> {
+    const user$ = this.user$;
+    return user$.pipe(
+      map((user) =>
+        new HttpHeaders().set('Authorization', 'Bearer ' + user.tokens.access)
+      )
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.watcher.unsubscribe();
   }
 }
