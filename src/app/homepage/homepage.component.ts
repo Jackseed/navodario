@@ -13,7 +13,7 @@ import { MediaObserver, MediaChange } from '@angular/flex-layout';
 // Material
 import { MatDialog } from '@angular/material/dialog';
 import { environment } from 'src/environments/environment';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, Router, RouterEvent } from '@angular/router';
 import { User } from '../auth/auth.model';
 
 @Component({
@@ -72,8 +72,8 @@ export class HomepageComponent implements OnInit {
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
-        tap((event) => {
-          if (event.url) {
+        tap((event: RouterEvent) => {
+          if (event.url.includes('code')) {
             const code = event.url.substring(event.url.indexOf('=') + 1);
             this.getAccessToken(code);
             // otherwise get a refresh token
@@ -183,19 +183,18 @@ export class HomepageComponent implements OnInit {
   }
 
   private async getRefreshToken() {
-    console.log('getting refresh token');
     const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
     this.afAuth.user
       .pipe(
         switchMap((authUser) => {
+          console.log(authUser);
           const userDoc = this.afs.doc<User>(`users/${authUser.uid}`);
           return userDoc.valueChanges();
         }),
-        map((dbUser) => dbUser.tokens.refresh),
-        map((refreshToken) => {
-          console.log('refreshing token ', refreshToken);
+        map((dbUser) => {
           return getTokenFunction({
-            refreshToken,
+            userId: dbUser.id,
+            refreshToken: dbUser.tokens.refresh,
             tokenType: 'refresh',
           })
             .pipe(first())

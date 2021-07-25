@@ -237,20 +237,24 @@ exports.saveToken = functions
   })
   .https.onRequest(async (req: any, res: any) => {
     const accessToken = req.body.token;
-    let tokens: { access: string; addedTime: Object; refresh?: string } = {
-      access: accessToken,
-      addedTime: admin.firestore.FieldValue.serverTimestamp(),
-    };
-    // add refresh token only when requesting an access token for the first time
-    if (req.body.tokenType === 'access')
-      tokens = { ...tokens, refresh: req.body.refreshToken };
+    if (accessToken) {
+      let tokens: { access: string; addedTime: Object; refresh?: string } = {
+        access: accessToken,
+        addedTime: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      // add refresh token only when requesting an access token for the first time
+      if (req.body.tokenType === 'access')
+        tokens = { ...tokens, refresh: req.body.refreshToken };
 
-    await admin.firestore().collection('users').doc(req.body.userId).set(
-      {
-        tokens,
-      },
-      { merge: true }
-    );
+      await admin.firestore().collection('users').doc(req.body.userId).set(
+        {
+          tokens,
+        },
+        { merge: true }
+      );
 
-    res.json({ result: `Access token successfully added: ${accessToken}.` });
+      res.json({ result: `Access token successfully added: ${accessToken}.` });
+    } else {
+      res.json({ result: `Empty token.` });
+    }
   });

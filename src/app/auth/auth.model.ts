@@ -2,7 +2,7 @@ import firebase from 'firebase/app';
 import Timestamp = firebase.firestore.Timestamp;
 
 export interface User {
-  uid: string;
+  id: string;
   tokens?: {
     access?: string;
     addedTime?: Timestamp;
