@@ -6,7 +6,7 @@ import { AngularFireAuth } from '@angular/fire/auth';
 import { AngularFirestore } from '@angular/fire/firestore';
 import { AngularFireFunctions } from '@angular/fire/functions';
 // Rxjs
-import { Subscription } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { filter, first, map, switchMap, tap } from 'rxjs/operators';
 // Flex layout
 import { MediaObserver, MediaChange } from '@angular/flex-layout';
@@ -15,6 +15,14 @@ import { MatDialog } from '@angular/material/dialog';
 import { environment } from 'src/environments/environment';
 import { NavigationEnd, Router, RouterEvent } from '@angular/router';
 import { User } from '../auth/auth.model';
+
+declare global {
+  interface Window {
+    onSpotifyWebPlaybackSDKReady(): void;
+    // @ts-ignore: Unreachable code error
+    Spotify: typeof Spotify;
+  }
+}
 
 @Component({
   selector: 'app-homepage',
@@ -80,6 +88,31 @@ export class HomepageComponent implements OnInit {
           } else {
             this.getRefreshToken();
           }
+        }),
+        first()
+      )
+      .subscribe();
+
+    // instantiate the player
+    this.user$
+      .pipe(
+        filter((user) => !!user.tokens.access),
+        tap(async (user: User) => {
+          const token = user.tokens.access;
+          // @ts-ignore: Unreachable code error
+          const { Player } = await this.waitForSpotifyWebPlaybackSDKToLoad();
+
+          const player = new Player({
+            name: 'Nova Jukebox',
+            getOAuthToken: (callback) => {
+              callback(token);
+            },
+          });
+          await player.connect();
+          // Ready
+          player.addListener('ready', ({ device_id }) => {
+            this.saveDeviceId(user.id, device_id);
+          });
         }),
         first()
       )
@@ -187,7 +220,6 @@ export class HomepageComponent implements OnInit {
     this.afAuth.user
       .pipe(
         switchMap((authUser) => {
-          console.log(authUser);
           const userDoc = this.afs.doc<User>(`users/${authUser.uid}`);
           return userDoc.valueChanges();
         }),
@@ -203,5 +235,59 @@ export class HomepageComponent implements OnInit {
         first()
       )
       .subscribe();
+  }
+
+  private get user$(): Observable<User> {
+    return this.afAuth.user.pipe(
+      switchMap((authUser) => {
+        const userDoc = this.afs.doc<User>(`users/${authUser.uid}`);
+        return userDoc.valueChanges();
+      })
+    );
+  }
+
+  private async initializePlayer() {
+    // @ts-ignore: Unreachable code error
+    const { Player } = await this.waitForSpotifyWebPlaybackSDKToLoad();
+    const user$ = this.user$;
+
+    // instantiate the player
+    user$
+      .pipe(
+        tap(async (user: User) => {
+          const token = user.tokens.access;
+          const player = new Player({
+            name: 'Nova Jukebox',
+            getOAuthToken: (callback) => {
+              callback(token);
+            },
+          });
+          await player.connect();
+          // Ready
+          player.addListener('ready', ({ device_id }) => {
+            this.saveDeviceId(user.id, device_id);
+          });
+          console.log('player initialized');
+        }),
+        first()
+      )
+      .subscribe();
+  }
+
+  // check if window.Spotify object has either already been defined, or check until window.onSpotifyWebPlaybackSDKReady has been fired
+  public async waitForSpotifyWebPlaybackSDKToLoad() {
+    return new Promise((resolve) => {
+      if (window.Spotify) {
+        resolve(window.Spotify);
+      } else {
+        window.onSpotifyWebPlaybackSDKReady = () => {
+          resolve(window.Spotify);
+        };
+      }
+    });
+  }
+
+  private saveDeviceId(userId: string, deviceId: string): Promise<void> {
+    return this.afs.collection('users').doc(userId).update({ deviceId });
   }
 }
