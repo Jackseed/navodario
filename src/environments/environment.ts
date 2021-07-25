@@ -4,6 +4,12 @@
 
 export const environment = {
   production: false,
+  spotify: {
+    apiUrl: 'https://api.spotify.com/v1/me',
+    clientId: 'ef247ad2b6a6480ab274d9f32b27dfe9',
+    responseType: 'code',
+    redirectURI: 'http://localhost:4200',
+  },
   firebaseConfig: {
     apiKey: 'AIzaSyBc4oEqQ_J5vJIyZys630Z3RCQpZJn2E9o',
     authDomain: 'nova-jukebox.firebaseapp.com',
