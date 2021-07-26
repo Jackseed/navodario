@@ -6,6 +6,7 @@ import { DialogComponent } from '../dialog/dialog.component';
 import { AngularFireAuth } from '@angular/fire/auth';
 import { AngularFirestore } from '@angular/fire/firestore';
 import { AngularFireFunctions } from '@angular/fire/functions';
+import firebase from 'firebase/app';
 // Rxjs
 import { Observable, of, Subscription } from 'rxjs';
 import { catchError, filter, first, map, switchMap, tap } from 'rxjs/operators';
@@ -319,6 +320,16 @@ export class HomepageComponent implements OnInit, OnDestroy {
   private get headers$(): Observable<HttpHeaders> {
     const user$ = this.user$;
     return user$.pipe(
+      tap(async (user) => {
+        if (
+          (firebase.firestore.Timestamp.now().toMillis() -
+            user.tokens.addedTime.toMillis()) /
+            1000 >
+          3600
+        ) {
+          await this.getRefreshToken();
+        }
+      }),
       map((user) =>
         new HttpHeaders().set('Authorization', 'Bearer ' + user.tokens.access)
       )
