@@ -16,6 +16,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { environment } from 'src/environments/environment';
 import { NavigationEnd, Router, RouterEvent } from '@angular/router';
 import { User } from '../auth/auth.model';
+import { Track } from '../track.model';
 
 declare global {
   interface Window {
@@ -32,15 +33,18 @@ declare global {
 })
 export class HomepageComponent implements OnInit, OnDestroy {
   private watcher: Subscription;
-  public dialogWidth: string;
-  public dialogHeight: string;
-  isPlaying = false;
-  startTime = 0;
-  authorizeURL = 'https://accounts.spotify.com/authorize';
-  clientId: string = environment.spotify.clientId;
-  responseType: string = environment.spotify.responseType;
-  redirectURI = environment.spotify.redirectURI;
-  scope = ['streaming', 'user-read-email', 'user-read-private'].join('%20');
+  private dialogWidth: string;
+  private dialogHeight: string;
+  private isPlaying = false;
+  private startTime = 0;
+  private authorizeURL = 'https://accounts.spotify.com/authorize';
+  private clientId: string = environment.spotify.clientId;
+  private responseType: string = environment.spotify.responseType;
+  private redirectURI = environment.spotify.redirectURI;
+  private scope = ['streaming', 'user-read-email', 'user-read-private'].join(
+    '%20'
+  );
+  private tracks$;
 
   constructor(
     private router: Router,
@@ -97,6 +101,9 @@ export class HomepageComponent implements OnInit, OnDestroy {
 
     // instantiate the player & launch the track
     this.initializePlayer().catch((err) => console.log(err));
+
+    this.tracks$ = this.afs.collection('tracks').valueChanges();
+    this.tracks$.subscribe(console.log);
   }
 
   async play() {
