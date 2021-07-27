@@ -45,7 +45,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
   private scope = ['streaming', 'user-read-email', 'user-read-private'].join(
     '%20'
   );
-  private tracks$;
+  private filteredTracks$;
 
   constructor(
     private router: Router,
@@ -103,8 +103,8 @@ export class HomepageComponent implements OnInit, OnDestroy {
     // instantiate the player & launch the track
     this.initializePlayer().catch((err) => console.log(err));
 
-    this.tracks$ = this.afs.collection('tracks').valueChanges();
-    this.tracks$.subscribe(console.log);
+    this.filteredTracks$ = this.filteredTrack$;
+    this.filteredTracks$.subscribe(console.log);
   }
 
   async play() {
@@ -139,6 +139,17 @@ export class HomepageComponent implements OnInit, OnDestroy {
     if (event.key === ' ') {
       this.play();
     }
+  }
+
+  get filteredTrack$() {
+    const today = new Date();
+    return this.afs
+      .collection('tracks', (ref) =>
+        ref
+          .where('added_at_day', '==', today.getDay())
+          .where('added_at_time', '==', today.getHours())
+      )
+      .valueChanges();
   }
 
   openDialog(): void {
