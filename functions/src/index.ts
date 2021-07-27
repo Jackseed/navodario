@@ -50,11 +50,8 @@ async function getSpotifyAuthHeaders(): Promise<Object> {
 }
 
 /////////////////////// GET PLAYLIST TRACKS ///////////////////////
-exports.getPlaylistTracks = functions
-  .runWith({
-    timeoutSeconds: 500,
-  })
-  .https.onRequest(async (req: any, res: any) => {
+exports.getPlaylistTracks = functions.https.onRequest(
+  async (req: any, res: any) => {
     const headers = await getSpotifyAuthHeaders();
     const playlistId = req.body.playlistId;
     let playlist: any;
@@ -105,6 +102,12 @@ exports.getPlaylistTracks = functions
             playlistTracks.items.map((item: any) => {
               tracks.push({
                 added_at: item.added_at ? item.added_at : '',
+                added_at_day: item.added_at
+                  ? new Date(item.added_at).getDay()
+                  : null,
+                added_at_hours: item.added_at
+                  ? new Date(item.added_at).getHours()
+                  : null,
                 name: item.track.name ? item.track.name : '',
                 uri: item.track.uri ? item.track.uri : '',
                 spotifyId: item.track.id ? item.track.id : '',
@@ -140,9 +143,10 @@ exports.getPlaylistTracks = functions
     res.json({
       result: `Tracks successfully saved from playlistId, total tracks: ${playlist.tracks.total}.`,
     });
-  });
+  }
+);
 
-function saveTracks(tracks: any[]): void {
+async function saveTracks(tracks: any[]): Promise<void> {
   const firebaseWriteLimit = 500;
 
   for (let i = 0; i <= Math.floor(tracks.length / firebaseWriteLimit); i++) {
@@ -158,7 +162,7 @@ function saveTracks(tracks: any[]): void {
       }
     }
 
-    batch
+    await batch
       .commit()
       .then((_: any) => console.log(`batch of ${i} saved`))
       .catch((error: any) => console.log(error));
