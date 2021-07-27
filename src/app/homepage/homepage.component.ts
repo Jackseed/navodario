@@ -147,7 +147,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
       .collection('tracks', (ref) =>
         ref
           .where('added_at_day', '==', today.getDay())
-          .where('added_at_time', '==', today.getHours())
+          .where('added_at_hours', '==', today.getHours())
       )
       .valueChanges();
   }
