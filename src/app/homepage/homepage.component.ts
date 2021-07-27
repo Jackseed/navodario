@@ -116,7 +116,15 @@ export class HomepageComponent implements OnInit, OnDestroy {
       this.isPlaying = true;
       setTimeout(() => {
         this.changeBackground('url(../../assets/playing.gif)');
-        this.playSpotify(['spotify:track:2LD2gT7gwAurzdQDQtILds']);
+        this.filteredTrack$
+          .pipe(
+            tap((tracks: Track[]) => {
+              const uris = tracks.map((track) => track.uri);
+              this.playSpotify(uris);
+            }),
+            first()
+          )
+          .subscribe();
       }, 2700);
     } else {
       this.changeBackground('url(../../assets/pause.gif)');
