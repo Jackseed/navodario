@@ -69,12 +69,17 @@ exports.getPlaylistTracks = functions.https.onRequest(
     let allPlaylistTracks: any[] = [];
     const playlistTracksLimit = 100;
     const requestArray: any[] = [];
+    // minimize the calls needed to what will be saved
+    const totalTracksCalled = Math.min(
+      playlist.tracks.total,
+      req.body.end - req.body.start
+    );
 
     if (playlist) {
       // create all the requests to get the playlist tracks within API limits
       for (
         let i = 0;
-        i <= Math.floor(playlist.tracks.total / playlistTracksLimit) + 1;
+        i <= Math.floor(totalTracksCalled / playlistTracksLimit) + 1;
         i++
       ) {
         const offset = i * playlistTracksLimit;
@@ -137,6 +142,8 @@ exports.getPlaylistTracks = functions.https.onRequest(
       })
       .catch((err) => console.log('something went wrong.. ', err));
 
+    if (req.body.start && req.body.end)
+      allPlaylistTracks = allPlaylistTracks.slice(req.body.start, req.body.end);
     // save tracks to firestore
     saveTracks(allPlaylistTracks);
 
