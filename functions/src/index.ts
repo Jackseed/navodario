@@ -1,6 +1,10 @@
 /* eslint-disable */
 const functions = require('firebase-functions');
 const axios = require('axios').default;
+const axiosRetry = require('axios-retry');
+axiosRetry(axios, {
+  retries: 3,
+});
 const admin = require('firebase-admin');
 admin.initializeApp();
 
@@ -72,12 +76,20 @@ exports.getPlaylistTracks = functions
     let allPlaylistTracks: any[] = [];
     const playlistTracksLimit = 100;
     const requestArray: any[] = [];
+    // minimize the calls needed to what will be saved, -1 is here to compensate the array starting to 0
+    const totalTracksCalled: number =
+      req.body.start - req.body.end
+        ? Math.min(playlist.tracks.total, req.body.end - req.body.start) - 1
+        : playlist.tracks.total;
 
     if (playlist) {
       // create all the requests to get the playlist tracks within API limits
       for (
         let i = 0;
-        i <= Math.floor(playlist.tracks.total / playlistTracksLimit) + 1;
+        // check if it's the last tracks of the array, if it is then adds 1 to get what's left
+        totalTracksCalled % playlistTracksLimit == 0
+          ? i <= Math.floor(totalTracksCalled / playlistTracksLimit)
+          : i <= Math.floor(totalTracksCalled / playlistTracksLimit) + 1;
         i++
       ) {
         const offset = i * playlistTracksLimit;
@@ -105,6 +117,12 @@ exports.getPlaylistTracks = functions
             playlistTracks.items.map((item: any) => {
               tracks.push({
                 added_at: item.added_at ? item.added_at : '',
+                added_at_day: item.added_at
+                  ? new Date(item.added_at).getDay()
+                  : null,
+                added_at_hours: item.added_at
+                  ? new Date(item.added_at).getHours()
+                  : null,
                 name: item.track.name ? item.track.name : '',
                 uri: item.track.uri ? item.track.uri : '',
                 spotifyId: item.track.id ? item.track.id : '',
@@ -134,36 +152,59 @@ exports.getPlaylistTracks = functions
       })
       .catch((err) => console.log('something went wrong.. ', err));
 
-    // save tracks to firestore
-    saveTracks(allPlaylistTracks);
+    if (req.body.start - req.body.end)
+      allPlaylistTracks = allPlaylistTracks.slice(req.body.start, req.body.end);
+    // save tracks on firestore
+    await axios({
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      url: 'https://us-central1-nova-jukebox.cloudfunctions.net/saveTracks',
+      data: {
+        tracks: allPlaylistTracks,
+      },
+      method: 'POST',
+    }).catch((err: any) => console.log('error: ', err));
 
     res.json({
-      result: `Tracks successfully saved from playlistId, total tracks: ${playlist.tracks.total}.`,
+      result: `Tracks successfully saved from playlistId, total tracks: ${allPlaylistTracks.length}.`,
     });
+
+    return res;
   });
 
-function saveTracks(tracks: any[]): void {
-  const firebaseWriteLimit = 500;
-
-  for (let i = 0; i <= Math.floor(tracks.length / firebaseWriteLimit); i++) {
-    const bactchTracks = tracks.slice(
-      firebaseWriteLimit * i,
-      firebaseWriteLimit * (i + 1)
-    );
-    const batch = admin.firestore().batch();
-    for (const track of bactchTracks) {
-      if (track) {
-        const ref = admin.firestore().collection('tracks').doc();
-        batch.set(ref, track, { merge: true });
+exports.saveTracks = functions
+  .runWith({
+    timeoutSeconds: 500,
+  })
+  .https.onRequest(async (req: any, res: any) => {
+    const tracks = req.body.tracks;
+    const firebaseWriteLimit = 500;
+    console.log('total tracks saving: ', tracks.length);
+    for (let i = 0; i <= Math.floor(tracks.length / firebaseWriteLimit); i++) {
+      const bactchTracks = tracks.slice(
+        firebaseWriteLimit * i,
+        firebaseWriteLimit * (i + 1)
+      );
+      const batch = admin.firestore().batch();
+      for (const track of bactchTracks) {
+        if (track) {
+          const ref = admin.firestore().collection('tracks').doc();
+          batch.set(ref, track, { merge: true });
+        }
       }
-    }
 
-    batch
-      .commit()
-      .then((_: any) => console.log(`batch of ${i} saved`))
-      .catch((error: any) => console.log(error));
-  }
-}
+      await batch
+        .commit()
+        .then((_: any) => console.log(`batch of ${i} saved`))
+        .catch((error: any) => console.log(error));
+    }
+    res.json({
+      result: `Tracks successfully saved on Firestore, total tracks: ${tracks.length}.`,
+    });
+
+    return res;
+  });
 
 ////////////////// REQUEST SPOTIFY REFRESH OR ACCESS TOKENS //////////////////
 exports.getSpotifyToken = functions

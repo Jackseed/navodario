@@ -6,6 +6,7 @@ import { DialogComponent } from '../dialog/dialog.component';
 import { AngularFireAuth } from '@angular/fire/auth';
 import { AngularFirestore } from '@angular/fire/firestore';
 import { AngularFireFunctions } from '@angular/fire/functions';
+import firebase from 'firebase/app';
 // Rxjs
 import { Observable, of, Subscription } from 'rxjs';
 import { catchError, filter, first, map, switchMap, tap } from 'rxjs/operators';
@@ -16,6 +17,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { environment } from 'src/environments/environment';
 import { NavigationEnd, Router, RouterEvent } from '@angular/router';
 import { User } from '../auth/auth.model';
+import { Track } from '../track.model';
 
 declare global {
   interface Window {
@@ -32,15 +34,18 @@ declare global {
 })
 export class HomepageComponent implements OnInit, OnDestroy {
   private watcher: Subscription;
-  public dialogWidth: string;
-  public dialogHeight: string;
-  isPlaying = false;
-  startTime = 0;
-  authorizeURL = 'https://accounts.spotify.com/authorize';
-  clientId: string = environment.spotify.clientId;
-  responseType: string = environment.spotify.responseType;
-  redirectURI = environment.spotify.redirectURI;
-  scope = ['streaming', 'user-read-email', 'user-read-private'].join('%20');
+  private dialogWidth: string;
+  private dialogHeight: string;
+  private isPlaying = false;
+  private startTime = 0;
+  private authorizeURL = 'https://accounts.spotify.com/authorize';
+  private clientId: string = environment.spotify.clientId;
+  private responseType: string = environment.spotify.responseType;
+  private redirectURI = environment.spotify.redirectURI;
+  private scope = ['streaming', 'user-read-email', 'user-read-private'].join(
+    '%20'
+  );
+  private filteredTracks$;
 
   constructor(
     private router: Router,
@@ -97,6 +102,9 @@ export class HomepageComponent implements OnInit, OnDestroy {
 
     // instantiate the player & launch the track
     this.initializePlayer().catch((err) => console.log(err));
+
+    this.filteredTracks$ = this.filteredTrack$;
+    this.filteredTracks$.subscribe(console.log);
   }
 
   async play() {
@@ -108,7 +116,15 @@ export class HomepageComponent implements OnInit, OnDestroy {
       this.isPlaying = true;
       setTimeout(() => {
         this.changeBackground('url(../../assets/playing.gif)');
-        this.playSpotify(['spotify:track:2LD2gT7gwAurzdQDQtILds']);
+        this.filteredTrack$
+          .pipe(
+            tap((tracks: Track[]) => {
+              const uris = tracks.map((track) => track.uri);
+              this.playSpotify(uris);
+            }),
+            first()
+          )
+          .subscribe();
       }, 2700);
     } else {
       this.changeBackground('url(../../assets/pause.gif)');
@@ -131,6 +147,17 @@ export class HomepageComponent implements OnInit, OnDestroy {
     if (event.key === ' ') {
       this.play();
     }
+  }
+
+  get filteredTrack$() {
+    const today = new Date();
+    return this.afs
+      .collection('tracks', (ref) =>
+        ref
+          .where('added_at_day', '==', today.getDay())
+          .where('added_at_hours', '==', today.getHours())
+      )
+      .valueChanges();
   }
 
   openDialog(): void {
@@ -312,6 +339,17 @@ export class HomepageComponent implements OnInit, OnDestroy {
   private get headers$(): Observable<HttpHeaders> {
     const user$ = this.user$;
     return user$.pipe(
+      tap(async (user) => {
+        if (
+          (firebase.firestore.Timestamp.now().toMillis() -
+            user.tokens.addedTime.toMillis()) /
+            1000 >
+          3600
+        ) {
+          console.log('refreshing token');
+          await this.getRefreshToken();
+        }
+      }),
       map((user) =>
         new HttpHeaders().set('Authorization', 'Bearer ' + user.tokens.access)
       )
