@@ -346,6 +346,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
             1000 >
           3600
         ) {
+          console.log('refreshing token');
           await this.getRefreshToken();
         }
       }),

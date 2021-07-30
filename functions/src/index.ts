@@ -159,7 +159,7 @@ exports.getPlaylistTracks = functions
       headers: {
         'Content-Type': 'application/json',
       },
-      url: 'http://localhost:5001/nova-jukebox/us-central1/saveTracks',
+      url: 'https://us-central1-nova-jukebox.cloudfunctions.net/saveTracks',
       data: {
         tracks: allPlaylistTracks,
       },
