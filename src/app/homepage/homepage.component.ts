@@ -86,22 +86,29 @@ export class HomepageComponent implements OnInit, OnDestroy {
     // if url includes a code, get an access token
     this.router.events
       .pipe(
+        // wait for redirection to be ended before checking the url
         filter((event) => event instanceof NavigationEnd),
         tap((event: RouterEvent) => {
+          // if there is code in the url it's a first connexion,
+          // then get an access token
           if (event.url.includes('code')) {
             const code = event.url.substring(event.url.indexOf('=') + 1);
-            this.getAccessToken(code);
+            this.getAccessTokenAndInitializePlayer(code);
+
             // otherwise get a refresh token
           } else {
-            this.getRefreshToken();
+            this.getRefreshToken()
+              .then(
+                (
+                  _ // instantiate the player
+                ) => this.initializePlayer().catch((err) => console.log(err))
+              )
+              .catch((err) => console.log(err));
           }
         }),
         first()
       )
       .subscribe();
-
-    // instantiate the player & launch the track
-    this.initializePlayer().catch((err) => console.log(err));
 
     this.filteredTracks$ = this.filteredTrack$;
     this.filteredTracks$.subscribe(console.log);
@@ -201,7 +208,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     return this.afs.collection('users').doc(id).set({ id });
   }
 
-  private async getAccessToken(code: string) {
+  private async getAccessTokenAndInitializePlayer(code: string) {
     const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
     this.afAuth.user
       .pipe(
@@ -212,7 +219,9 @@ export class HomepageComponent implements OnInit, OnDestroy {
             userId: user.uid,
           })
             .pipe(first())
-            .subscribe();
+            .subscribe((_) =>
+              this.initializePlayer().catch((err) => console.log(err))
+            );
         }),
         first()
       )
