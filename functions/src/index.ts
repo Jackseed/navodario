@@ -224,7 +224,7 @@ exports.getSpotifyToken = functions
       params.append('grant_type', 'authorization_code');
       params.append('code', data.code);
       // this redirect_uri must be exactly the same as used in environment.(prod).ts
-      params.append('redirect_uri', 'https://nova-jukebox.web.app/');
+      params.append('redirect_uri', 'http://localhost:4200');
     } else {
       params.append('grant_type', 'refresh_token');
       params.append('refresh_token', data.refreshToken);
