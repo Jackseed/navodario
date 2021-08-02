@@ -136,10 +136,10 @@ export class HomepageComponent implements OnInit, OnDestroy {
     } else {
       this.changeBackground('url(../../assets/pause.gif)');
       this.isPlaying = false;
-      setTimeout(
-        () => this.changeBackground('url(../../assets/start.gif)'),
-        3000
-      );
+      setTimeout(() => {
+        this.changeBackground('url(../../assets/start.gif)');
+        this.pause();
+      }, 3000);
     }
     this.startTime = Date.now();
   }
@@ -325,6 +325,12 @@ export class HomepageComponent implements OnInit, OnDestroy {
         first()
       )
       .subscribe();
+  }
+
+  public async pause() {
+    const baseUrl = 'https://api.spotify.com/v1/me/player/pause';
+
+    return this.putRequests(baseUrl, '', null).pipe(first()).subscribe();
   }
 
   private limitTrackAmount(trackUris?: string[]): string[] {
