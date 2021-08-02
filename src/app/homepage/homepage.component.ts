@@ -48,7 +48,6 @@ export class HomepageComponent implements OnInit, OnDestroy {
   private scope = ['streaming', 'user-read-email', 'user-read-private'].join(
     '%20'
   );
-  private filteredTracks$;
 
   constructor(
     private router: Router,
@@ -78,7 +77,6 @@ export class HomepageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    console.log(this.title.getTitle());
     // if no user, open dialog to create one
     this.afAuth.user
       .pipe(
@@ -114,9 +112,6 @@ export class HomepageComponent implements OnInit, OnDestroy {
         first()
       )
       .subscribe();
-
-    this.filteredTracks$ = this.filteredTrack$;
-    this.filteredTracks$.subscribe(console.log);
   }
 
   async play() {
@@ -128,10 +123,12 @@ export class HomepageComponent implements OnInit, OnDestroy {
       this.isPlaying = true;
       setTimeout(() => {
         this.changeBackground('url(../../assets/playing.gif)');
-        this.filteredTrack$
+        this.filteredTracks$
           .pipe(
             tap((tracks: Track[]) => {
-              const uris = tracks.map((track) => track.uri);
+              let uris = tracks.map((track) => track.uri);
+              // randomize tracks
+              uris = this.shuffleArray(uris);
               this.playSpotify(uris);
             }),
             first()
@@ -161,7 +158,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }
   }
 
-  get filteredTrack$() {
+  get filteredTracks$() {
     const today = new Date();
     return this.afs
       .collection('tracks', (ref) =>
@@ -382,6 +379,15 @@ export class HomepageComponent implements OnInit, OnDestroy {
         new HttpHeaders().set('Authorization', 'Bearer ' + user.tokens.access)
       )
     );
+  }
+
+  // source: https://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
+  private shuffleArray(array: string[]): string[] {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
   }
 
   ngOnDestroy(): void {
