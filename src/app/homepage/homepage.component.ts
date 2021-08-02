@@ -289,9 +289,12 @@ export class HomepageComponent implements OnInit, OnDestroy {
           // when player state change, set page title with track details
           player.on('player_state_changed', async (state: WebPlaybackState) => {
             if (!state) return;
-            this.title.setTitle(
-              `${state.track_window.current_track.artists[0].name} - ${state.track_window.current_track.name}`
-            );
+
+            state.paused
+              ? this.title.setTitle('Nova Jukebox')
+              : this.title.setTitle(
+                  `${state.track_window.current_track.artists[0].name} - ${state.track_window.current_track.name}`
+                );
           });
         }),
         first()
