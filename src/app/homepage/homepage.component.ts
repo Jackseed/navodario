@@ -1,7 +1,9 @@
 // Angular
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { DialogComponent } from '../dialog/dialog.component';
+import { Title } from '@angular/platform-browser';
+import { NavigationEnd, Router, RouterEvent } from '@angular/router';
+import { environment } from 'src/environments/environment';
 // Angularfire
 import { AngularFireAuth } from '@angular/fire/auth';
 import { AngularFirestore } from '@angular/fire/firestore';
@@ -14,10 +16,11 @@ import { catchError, filter, first, map, switchMap, tap } from 'rxjs/operators';
 import { MediaObserver, MediaChange } from '@angular/flex-layout';
 // Material
 import { MatDialog } from '@angular/material/dialog';
-import { environment } from 'src/environments/environment';
-import { NavigationEnd, Router, RouterEvent } from '@angular/router';
+// Models
 import { User } from '../auth/auth.model';
-import { Track } from '../track.model';
+import { Track, WebPlaybackState } from '../track.model';
+// Components
+import { DialogComponent } from '../dialog/dialog.component';
 
 declare global {
   interface Window {
@@ -54,7 +57,8 @@ export class HomepageComponent implements OnInit, OnDestroy {
     private fns: AngularFireFunctions,
     public dialog: MatDialog,
     private mediaObserver: MediaObserver,
-    private http: HttpClient
+    private http: HttpClient,
+    private title: Title
   ) {
     this.watcher = this.mediaObserver
       .asObservable()
@@ -74,6 +78,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    console.log(this.title.getTitle());
     // if no user, open dialog to create one
     this.afAuth.user
       .pipe(
@@ -281,6 +286,14 @@ export class HomepageComponent implements OnInit, OnDestroy {
           player.addListener('ready', async ({ device_id }) => {
             this.saveDeviceId(user.id, device_id).catch((err) =>
               console.log(err)
+            );
+          });
+
+          // when player state change, set page title with track details
+          player.on('player_state_changed', async (state: WebPlaybackState) => {
+            if (!state) return;
+            this.title.setTitle(
+              `${state.track_window.current_track.artists[0].name} - ${state.track_window.current_track.name}`
             );
           });
         }),
