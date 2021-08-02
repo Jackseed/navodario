@@ -119,6 +119,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     if (delta < 3200) return;
     // if not playing, play; otherwise pause
     if (!this.isPlaying) {
+      this.playAudio('../../assets/vinyle_start.wav');
       this.changeBackground('url(../../assets/play.gif)');
       this.isPlaying = true;
       setTimeout(() => {
@@ -136,6 +137,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
           .subscribe();
       }, 2700);
     } else {
+      this.playAudio('../../assets/vinyle_end.wav');
       this.changeBackground('url(../../assets/pause.gif)');
       this.isPlaying = false;
       setTimeout(() => {
@@ -391,6 +393,13 @@ export class HomepageComponent implements OnInit, OnDestroy {
       [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
+  }
+
+  private playAudio(src: string) {
+    const audio = new Audio();
+    audio.src = src;
+    audio.load();
+    audio.play();
   }
 
   ngOnDestroy(): void {
