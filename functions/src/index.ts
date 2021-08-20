@@ -75,7 +75,8 @@ export const saveAndDeleteNovaEveryWeek = functions
   .runWith({
     timeoutSeconds: 500,
   })
-  .pubsub.schedule('every 10 minutes')
+  .pubsub.schedule('every monday 00:01')
+  .timeZone('Europe/Paris')
   .onRun(async (req: any, res: any) => {
     const playlistUris: any = {};
     // instantiate an empty uri array per radio
