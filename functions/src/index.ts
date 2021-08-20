@@ -8,6 +8,118 @@ axiosRetry(axios, {
 const admin = require('firebase-admin');
 admin.initializeApp();
 
+const nova = [
+  {
+    novaChannel: 'Radio Nova',
+    playlistId: '6GhFJfQ9pTY578m3l3CfOd',
+  },/*
+  {
+    novaChannel: 'Nouvo nova',
+    playlistId: '22x26Yktyw49iHcC5l0GOR',
+  },
+  {
+    novaChannel: 'Nova la nuit',
+    playlistId: '5IWE2zzGBxQmf1g3aI2sFa',
+  },
+  {
+    novaChannel: 'Nova classics',
+    playlistId: '013LrKxrQkVpoJTts6gin3',
+  },
+  {
+    novaChannel: 'Nova danse',
+    playlistId: '24WXdbI5caT1TZKlipmxzE',
+  }, */
+];
+
+/// PUB SUB JOB
+export const saveAndDeleteNovaEveryWeek = functions
+  .runWith({
+    timeoutSeconds: 500,
+  })
+  .https.onRequest(async (req: any, res: any) => /* .pubsub
+  .schedule('every Monday 00:00 AM')
+  .onRun(async (req: any, res: any)  */ {
+    const playlistUris: any = {};
+    // instantiate an empty uri array per radio
+    nova.map((radio) => (playlistUris[radio.playlistId] = []));
+
+    // create a request per radio to get tracks & save it to firestore
+    const savingRequestArray = nova.map((radio: any) => {
+      const request = axios({
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        url: 'http://localhost:5001/nova-jukebox/us-central1/getPlaylistTracks',
+        data: {
+          playlistId: radio.playlistId,
+          novaChannel: radio.novaChannel,
+        },
+        method: 'POST',
+      });
+
+      return request;
+    });
+    // send requests
+    await Promise.all(
+      savingRequestArray.map(async (request: any) => {
+        return await request
+          .then((response: any) => {
+            playlistUris[response.data.playlistId] = playlistUris[
+              response.data.playlistId
+            ].concat(response.data.uris);
+            console.log(
+              `${playlistUris[response.data.playlistId].length} tracks saved.`
+            );
+          })
+          .catch((err: any) => console.log('Something broke: ', err));
+      })
+    )
+      .then(async () => {
+        console.log(
+          'Every playlist tracks saved to firestore. Start of delete operation.'
+        );
+        // Tracks saved to Firestore, now delete it from Spotify
+        const deletingRequestArray = nova.map((radio: any) => {
+          const request = axios({
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            url: 'http://localhost:5001/nova-jukebox/us-central1/deleteTracks',
+            data: {
+              playlistId: radio.playlistId,
+              uris: playlistUris[radio.playlistId],
+            },
+            method: 'POST',
+          });
+
+          return request;
+        });
+        // send requests
+        await Promise.all(
+          deletingRequestArray.map(async (request: any) => {
+            return await request
+              .then((response: any) => {
+                console.log(`tracks deleted.`);
+              })
+              .catch((err: any) =>
+                console.log('Something broke when deleting: ', err)
+              );
+          })
+        )
+          .then(() => {
+            console.log('Every playlist tracks deleted.');
+          })
+          .catch((err) =>
+            console.log('something went wrong when trying to delete.. ', err)
+          );
+      })
+      .catch((err) => console.log('something went wrong.. ', err));
+
+    res.json({
+      result: `Tracks saved and deleted.`,
+    });
+  });
+
 /////////////////////// HEADERS FOR SPOTIFY API ///////////////////////
 // refresh access token
 async function getSpotifyAuthHeaders(): Promise<Object> {
@@ -18,7 +130,7 @@ async function getSpotifyAuthHeaders(): Promise<Object> {
     }`
   ).toString('base64');
 
-  // use a refresh token manually get beforehand
+  // use a refresh token manually created beforehand
   const params = new URLSearchParams();
   params.append('grant_type', 'refresh_token');
   params.append('refresh_token', functions.config().spotify.refreshtoken);
@@ -53,6 +165,7 @@ async function getSpotifyAuthHeaders(): Promise<Object> {
   return headers;
 }
 
+/// TODO: remove save tracks fuction call from this function
 /////////////////////// GET PLAYLIST TRACKS ///////////////////////
 exports.getPlaylistTracks = functions
   .runWith({
@@ -136,7 +249,7 @@ exports.getPlaylistTracks = functions
                 image: item.track.album.images[0].url
                   ? item.track.album.images[0].url
                   : '',
-                nova_channel: req.body.nova,
+                nova_channel: req.body.novaChannel,
               });
             });
 
@@ -144,11 +257,11 @@ exports.getPlaylistTracks = functions
 
             console.log(`loading batch ${index}`);
           })
-          .catch((err: any) => console.log('Something broke!', err));
+          .catch((err: any) => console.log('Something broke: ', err));
       })
     )
       .then(() => {
-        console.log('All batch loaded!');
+        console.log('All batch loaded.');
       })
       .catch((err) => console.log('something went wrong.. ', err));
 
@@ -166,13 +279,22 @@ exports.getPlaylistTracks = functions
       method: 'POST',
     }).catch((err: any) => console.log('error: ', err));
 
+    // extract uris for deleting afterwards
+    const uris = allPlaylistTracks.map((track) => {
+      const uri = { uri: track.uri };
+      return uri;
+    });
+
     res.json({
       result: `Tracks successfully saved from playlistId, total tracks: ${allPlaylistTracks.length}.`,
+      uris,
+      playlistId,
     });
 
     return res;
   });
 
+/////////////////////// SAVE TRACKS TO FIREBASE ///////////////////////
 exports.saveTracks = functions
   .runWith({
     timeoutSeconds: 500,
@@ -206,10 +328,67 @@ exports.saveTracks = functions
     return res;
   });
 
+/////////////////////// DELETE TRACKS FROM SPOTIFY PLAYLIST ///////////////////////
+exports.deleteTracks = functions
+  .runWith({
+    timeoutSeconds: 500,
+  })
+  .https.onRequest(async (req: any, res: any) => {
+    const headers = await getSpotifyAuthHeaders();
+    const uris = req.body.uris;
+    const playlistId = req.body.playlistId;
+    const tracksLimit = 100;
+    let batchRequests: Promise<Object>[] = [];
+
+    // delete tracks from playlist
+    if (uris.length > 0) {
+      //create batches of requests to respect Spotify limit
+      for (let i = 0; i <= Math.floor(uris.length / tracksLimit); i++) {
+        const bactchUris = uris.slice(tracksLimit * i, tracksLimit * (i + 1));
+        console.log(
+          `creating delete request for ${bactchUris.length} tracks out of ${uris.length}.`
+        );
+        const request = axios.delete(
+          `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+          {
+            headers,
+            data: {
+              tracks: bactchUris,
+            },
+          }
+        );
+        batchRequests = batchRequests.concat(request);
+      }
+
+      // send requests
+      await Promise.all(
+        batchRequests.map(async (request) => {
+          return await request
+            .then((response: any) => {
+              console.log('response status: ', response.status);
+            })
+            .catch((err: any) => {
+              console.log('error: ', err);
+            });
+        })
+      )
+        .then(() => {
+          console.log(
+            `${uris.length} tracks deleted from playlist ${playlistId}`
+          );
+        })
+        .catch((err) => console.log('something went wrong.. ', err));
+    }
+
+    res.status(200).send();
+
+    return res;
+  });
+
 ////////////////// REQUEST SPOTIFY REFRESH OR ACCESS TOKENS //////////////////
 exports.getSpotifyToken = functions
   .runWith({
-    timeoutSeconds: 500,
+    timeoutSeconds: 50,
   })
   .https.onCall(async (data: any, context: any) => {
     const secret = Buffer.from(
