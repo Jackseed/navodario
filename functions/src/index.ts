@@ -12,28 +12,31 @@ admin.initializeApp();
 const nova = [
   {
     novaChannel: 'Radio Nova',
-    playlistId: '6wQtOcO0IvsscZM1TBFAlO',
+    playlistId: '1fCjGw7LvjkHuHQFvkwfA8',
     frequence: '910',
-  } /*
+  },
   {
     novaChannel: 'Nouvo nova',
-    playlistId: '22x26Yktyw49iHcC5l0GOR',
+    playlistId: '0SpEhrGn9oz15QVwB3wf6A',
+    frequence: '79676',
   },
   {
     novaChannel: 'Nova la nuit',
-    playlistId: '5IWE2zzGBxQmf1g3aI2sFa',
+    playlistId: '2aNLb039MKg2M3Mq6cjKlb',
+    frequence: '916',
   },
   {
     novaChannel: 'Nova classics',
-    playlistId: '013LrKxrQkVpoJTts6gin3',
+    playlistId: '5LwD8Kiza45zqxNLb5wagT',
+    frequence: '913',
   },
   {
     novaChannel: 'Nova danse',
-    playlistId: '24WXdbI5caT1TZKlipmxzE',
-  }, */,
+    playlistId: '6GMql0jVg5605aDX6ZwTpw',
+    frequence: '560',
+  },
 ];
 const limitTracksToCheck = 10;
-
 /// PUB SUB: SCRAPE NOVA & ADD TO SPOTIFY EVERY 5 MIN
 export const saveNovaEveryFiveMinutes = functions.pubsub
   .schedule('every 5 minutes')
@@ -70,12 +73,12 @@ export const saveNovaEveryFiveMinutes = functions.pubsub
       .catch((err) => console.log('something went wrong.. ', err));
   });
 
-/// PUB SUB: SAVE & DELETE EVERY WEEK
+/// PUB SUB: SAVE & DELETE EVERY WEEK EVERY DAY 06:00 AM
 export const saveAndDeleteNovaEveryWeek = functions
   .runWith({
     timeoutSeconds: 500,
   })
-  .pubsub.schedule('every monday 00:01')
+  .pubsub.schedule('0 06 * * *')
   .timeZone('Europe/Paris')
   .onRun(async (req: any, res: any) => {
     const playlistUris: any = {};
