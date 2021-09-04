@@ -52,3 +52,4 @@ functions/.runtimeconfig.json
 functions/ui-debug.log
 ui-debug.log
 firestore-debug.log
+.runtimeconfig.json
