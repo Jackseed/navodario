@@ -46,6 +46,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     private spotifyService: SpotifyService,
     private authService: AuthService
   ) {
+    // responsive dialog size
     this.watcher = this.mediaObserver
       .asObservable()
       .pipe(
@@ -64,7 +65,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // if no user, open dialog to create one
+    // if user isn't connected, open dialog to create one
     this.afAuth.user
       .pipe(
         filter((user) => !!!user),
@@ -73,37 +74,38 @@ export class HomepageComponent implements OnInit, OnDestroy {
       )
       .subscribe();
 
-    // if url includes a code, get an access token
+    // check for a code within url to know if it's a first connexion
     this.router.events
       .pipe(
-        // wait for redirection to be ended before checking the url
+        // wait for redirection to be ended
         filter((event) => event instanceof NavigationEnd),
         tap((event: RouterEvent) => {
-          // if there is code in the url it's a first connexion,
-          // then get an access token
-          if (event.url.includes('code')) {
-            const code = event.url.substring(event.url.indexOf('=') + 1);
-
-            this.spotifyService.getAccessTokenAndInitializePlayer(code);
-
-            // otherwise get a refresh token
-          } else {
-            this.spotifyService
-              .getRefreshToken()
-              .then(
-                (
-                  _ // instantiate the player
-                ) =>
-                  this.spotifyService
-                    .initializePlayer()
-                    .catch((err) => console.log(err))
-              )
-              .catch((err) => console.log(err));
-          }
+          event.url.includes('code')
+            ? this.getAccessTokenWithCode(event)
+            : this.refreshToken();
         }),
         first()
       )
       .subscribe();
+  }
+
+  getAccessTokenWithCode(event: RouterEvent) {
+    const code = event.url.substring(event.url.indexOf('=') + 1);
+    this.spotifyService.getAccessTokenAndInitializePlayer(code);
+  }
+
+  refreshToken() {
+    this.spotifyService
+      .getRefreshToken()
+      .then(
+        (
+          _ // instantiate the player
+        ) =>
+          this.spotifyService
+            .initializePlayer()
+            .catch((err) => console.log(err))
+      )
+      .catch((err) => console.log(err));
   }
 
   async play() {
