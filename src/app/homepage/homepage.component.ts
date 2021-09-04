@@ -96,6 +96,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
           // then get an access token
           if (event.url.includes('code')) {
             const code = event.url.substring(event.url.indexOf('=') + 1);
+
             this.getAccessTokenAndInitializePlayer(code);
 
             // otherwise get a refresh token
@@ -213,6 +214,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
   }
 
   private async getAccessTokenAndInitializePlayer(code: string) {
+    // get token & save it on db
     const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
     this.afAuth.user
       .pipe(
