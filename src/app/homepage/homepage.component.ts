@@ -3,7 +3,6 @@ import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { NavigationEnd, Router, RouterEvent } from '@angular/router';
 // Angularfire
 import { AngularFireAuth } from '@angular/fire/auth';
-import { AngularFirestore } from '@angular/fire/firestore';
 // Rxjs
 import { Subscription } from 'rxjs';
 import { filter, first, map, tap } from 'rxjs/operators';
@@ -18,7 +17,6 @@ import { AuthService } from '../auth/auth.service';
 import { Track } from '../spotify/track.model';
 // Components
 import { DialogComponent } from '../dialog/dialog.component';
-
 
 declare global {
   interface Window {
@@ -43,7 +41,6 @@ export class HomepageComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private afAuth: AngularFireAuth,
-    private afs: AngularFirestore,
     public dialog: MatDialog,
     private mediaObserver: MediaObserver,
     private spotifyService: SpotifyService,
@@ -110,43 +107,58 @@ export class HomepageComponent implements OnInit, OnDestroy {
   }
 
   async play() {
+    // add delay for animations to complete
     const delta = Date.now() - this.startTime;
     if (delta < 3200) return;
-    // if not playing, play; otherwise pause
-    if (!this.isPlaying) {
-      this.playAudio('../../assets/vinyle_start.wav');
-      this.changeBackground('url(../../assets/play.gif)');
-      this.isPlaying = true;
-      setTimeout(() => {
-        this.changeBackground('url(../../assets/playing.gif)');
-        this.spotifyService.filteredTracks$
-          .pipe(
-            tap((tracks: Track[]) => {
-              let uris = tracks.map((track) => track.uri);
-              // randomize tracks
-              uris = this.shuffleArray(uris);
-              this.spotifyService.playSpotify(uris);
-            }),
-            first()
-          )
-          .subscribe();
-      }, 2700);
-    } else {
-      this.playAudio('../../assets/vinyle_end.wav');
-      this.changeBackground('url(../../assets/pause.gif)');
-      this.isPlaying = false;
-      setTimeout(() => {
-        this.changeBackground('url(../../assets/start.gif)');
-        this.spotifyService.pause();
-      }, 3000);
-    }
+
+    this.isPlaying ? this.pause : this.playTracks();
+
     this.startTime = Date.now();
+  }
+
+  private playTracks() {
+    // animation & audio
+    this.playAudio('../../assets/vinyle_start.wav');
+    this.changeBackground('url(../../assets/play.gif)');
+
+    this.isPlaying = true;
+
+    setTimeout(() => {
+      // set playing animation when play animation is over
+      this.changeBackground('url(../../assets/playing.gif)');
+      // get according tracks & play
+      this.spotifyService.filteredTracks$
+        .pipe(
+          tap((tracks: Track[]) => {
+            let uris = tracks.map((track) => track.uri);
+            // randomize tracks
+            uris = this.shuffleArray(uris);
+            this.spotifyService.playSpotify(uris);
+          }),
+          first()
+        )
+        .subscribe();
+    }, 2700);
+  }
+
+  private pause() {
+    // animation & audio
+    this.playAudio('../../assets/vinyle_end.wav');
+    this.changeBackground('url(../../assets/pause.gif)');
+    this.isPlaying = false;
+
+    setTimeout(() => {
+      // set start animation when pause animation is over
+      this.changeBackground('url(../../assets/start.gif)');
+      this.spotifyService.pause();
+    }, 3000);
   }
 
   changeBackground(img: string) {
     document.getElementById('image').style.backgroundImage = img;
   }
 
+  // spacebar as pause button
   @HostListener('document:keydown', ['$event']) onKeydownHandler(
     event: KeyboardEvent
   ) {
@@ -155,6 +167,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }
   }
 
+  // login dialog
   openDialog(): void {
     const dialogRef = this.dialog.open(DialogComponent, {
       width: this.dialogWidth,
