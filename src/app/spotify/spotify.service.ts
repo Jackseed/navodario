@@ -9,7 +9,7 @@ import { AngularFirestore } from '@angular/fire/firestore';
 import { AngularFireFunctions } from '@angular/fire/functions';
 // Rxjs
 import { Observable, of, Subscription } from 'rxjs';
-import { catchError, first, map, switchMap, tap } from 'rxjs/operators';
+import { catchError, filter, first, map, switchMap, tap } from 'rxjs/operators';
 // Services
 import { AuthService } from '../auth/auth.service';
 // Models
@@ -94,6 +94,7 @@ export class SpotifyService {
 
     user$
       .pipe(
+        filter((user) => !!user.deviceId),
         switchMap((user) => {
           const queryParam =
             user.deviceId && trackUris ? `?device_id=${user.deviceId}` : '';

@@ -81,20 +81,20 @@ export class HomepageComponent implements OnInit, OnDestroy {
         filter((event) => event instanceof NavigationEnd),
         tap((event: RouterEvent) => {
           event.url.includes('code')
-            ? this.getAccessTokenWithCode(event)
-            : this.refreshToken();
+            ? this.getAccessTokenWithCodeAndInstantiatePlayer(event)
+            : this.refreshTokenAndInstantiatePlayer();
         }),
         first()
       )
       .subscribe();
   }
 
-  getAccessTokenWithCode(event: RouterEvent) {
+  getAccessTokenWithCodeAndInstantiatePlayer(event: RouterEvent) {
     const code = event.url.substring(event.url.indexOf('=') + 1);
     this.spotifyService.getAccessTokenAndInitializePlayer(code);
   }
 
-  refreshToken() {
+  refreshTokenAndInstantiatePlayer() {
     this.spotifyService
       .getRefreshToken()
       .then(
@@ -113,7 +113,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     const delta = Date.now() - this.startTime;
     if (delta < 3200) return;
 
-    this.isPlaying ? this.pause : this.playTracks();
+    this.isPlaying ? this.pause() : this.playTracks();
 
     this.startTime = Date.now();
   }
