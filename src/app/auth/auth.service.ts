@@ -52,7 +52,15 @@ export class AuthService {
   private setUser(id: string): Promise<void> {
     return this.afs.collection('users').doc(id).set({ id });
   }
-  
+
+  public async getUser(): Promise<User | null> {
+    const authUser = await this.afAuth.authState.pipe(first()).toPromise();
+    if (!!!authUser) return null;
+    const userDoc = this.afs.doc<User>(`users/${authUser.uid}`);
+    const user = await userDoc.valueChanges().pipe(first()).toPromise();
+    return user;
+  }
+
   private authSpotify() {
     this.authorizeURL += '?' + 'client_id=' + this.clientId;
     this.authorizeURL += '&response_type=' + this.responseType;
