@@ -1,4 +1,6 @@
-# Navodario
+# Nova jukebox
+Nova jukebox is a simple website to play music on Spotify. Tracks are randomized within a selction of songs played by Radio Nova. It selects only songs played during the same week day and hour. 
+Check it out https://nova-jukebox.web.app/.
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 10.2.0.
 
