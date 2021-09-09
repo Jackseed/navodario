@@ -4,24 +4,22 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Title } from '@angular/platform-browser';
 // Angularfire
 import firebase from 'firebase/app';
-import { AngularFireAuth } from '@angular/fire/auth';
 import { AngularFirestore } from '@angular/fire/firestore';
 import { AngularFireFunctions } from '@angular/fire/functions';
 // Rxjs
-import { Observable, of, Subscription } from 'rxjs';
-import { catchError, filter, first, map, switchMap, tap } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { catchError, first, map, switchMap, tap } from 'rxjs/operators';
 // Services
 import { AuthService } from '../auth/auth.service';
 // Models
-import { WebPlaybackState } from './track.model';
-import { User } from '../auth/auth.model';
+import { Devices, WebPlaybackState } from './spotify.model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SpotifyService {
+  private deviceId: string;
   constructor(
-    private afAuth: AngularFireAuth,
     private afs: AngularFirestore,
     private authService: AuthService,
     private fns: AngularFireFunctions,
@@ -29,45 +27,38 @@ export class SpotifyService {
     private title: Title
   ) {}
 
-  public async initializePlayer(): Promise<Subscription> {
+  public async initializePlayer() {
+    console.log('initializing player');
     // @ts-ignore: Unreachable code error
     const { Player } = await this.waitForSpotifyWebPlaybackSDKToLoad();
-    const user$ = this.authService.user$;
+    const user = await this.authService.getUser();
 
-    // instantiate the player
-    return user$
-      .pipe(
-        tap(async (user: User) => {
-          const token = user.tokens.access;
-          const player = new Player({
-            name: 'Nova Jukebox',
-            getOAuthToken: (callback) => {
-              callback(token);
-            },
-          });
-          await player.connect();
+    const player = new Player({
+      name: 'Nova Jukebox',
+      getOAuthToken: (callback) => {
+        const token = user.tokens.access;
+        callback(token);
+      },
+    });
 
-          // Ready
-          player.addListener('ready', async ({ device_id }) => {
-            this.saveDeviceId(user.id, device_id).catch((err) =>
-              console.log(err)
-            );
-          });
+    await player.connect();
 
-          // when player state change, set page title with track details
-          player.on('player_state_changed', async (state: WebPlaybackState) => {
-            if (!state) return;
+    // Set device id
+    player.addListener('ready', ({ device_id }) => {
+      this.deviceId = device_id;
+      this.saveDeviceId(user.id, device_id);
+    });
 
-            state.paused
-              ? this.title.setTitle('Nova Jukebox')
-              : this.title.setTitle(
-                  `${state.track_window.current_track.artists[0].name} - ${state.track_window.current_track.name}`
-                );
-          });
-        }),
-        first()
-      )
-      .subscribe();
+    // Set page title on track change
+    player.on('player_state_changed', async (state: WebPlaybackState) => {
+      if (!state) return;
+
+      state.paused
+        ? this.title.setTitle('Nova Jukebox')
+        : this.title.setTitle(
+            `${state.track_window.current_track.artists[0].name} - ${state.track_window.current_track.name}`
+          );
+    });
   }
 
   // check if window.Spotify object has either already been defined, or check until window.onSpotifyWebPlaybackSDKReady has been fired
@@ -88,25 +79,40 @@ export class SpotifyService {
   }
 
   public async playSpotify(trackUris?: string[]): Promise<void> {
-    trackUris = this.limitTrackAmount(trackUris);
-    const user$ = this.authService.user$;
+    let user = await this.authService.getUser();
+    let deviceId = user.deviceId;
+
+    // verify that deviceId is still valid, otherwise update it
+    const deviceExists = await this.isDeviceExisting();
+    if (!deviceExists) {
+      await this.initializePlayer();
+      deviceId = this.deviceId;
+    }
+
+    // prepare and send play request
+    if (trackUris) trackUris = this.limitTrackAmount(trackUris);
     const baseUrl = 'https://api.spotify.com/v1/me/player/play';
+    const body = trackUris ? { uris: trackUris } : null;
+    const queryParam = deviceId && trackUris ? `?device_id=${deviceId}` : '';
 
-    user$
+    this.putRequests(baseUrl, queryParam, body)
       .pipe(
-        filter((user) => !!user.deviceId),
-        switchMap((user) => {
-          const queryParam =
-            user.deviceId && trackUris ? `?device_id=${user.deviceId}` : '';
-          const body = trackUris ? { uris: trackUris } : null;
-          return this.putRequests(baseUrl, queryParam, body);
-        }),
-
         catchError((err) => of(console.log(err))),
-
         first()
       )
       .subscribe();
+  }
+
+  private async isDeviceExisting(): Promise<boolean> {
+    const devices = await this.userAvailableDevices();
+    const user = await this.authService.getUser();
+
+    let deviceExists = false;
+    devices.devices.forEach((device) => {
+      if (user.deviceId === device.id) deviceExists = true;
+    });
+
+    return deviceExists;
   }
 
   public async pause() {
@@ -115,22 +121,50 @@ export class SpotifyService {
     return this.putRequests(baseUrl, '', null).pipe(first()).subscribe();
   }
 
+  // Get access token, save it on db, then initialize player
+  public async getAccessTokenAndInitializePlayer(code: string) {
+    const user = await this.authService.getUser();
+    const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
+
+    getTokenFunction({
+      code: code,
+      tokenType: 'access',
+      userId: user.id,
+    })
+      .pipe(first())
+      .subscribe((_) => this.initializePlayer());
+  }
+
+  // Get refresh token, save it on db, then initialize player
+  public async refreshTokenAndInitializePlayer() {
+    const user = await this.authService.getUser();
+    const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
+    getTokenFunction({
+      userId: user.id,
+      refreshToken: user.tokens.refresh,
+      tokenType: 'refresh',
+    })
+      .pipe(first())
+      .subscribe((_) => this.initializePlayer());
+  }
+
+  get filteredTracks$() {
+    const today = new Date();
+    return this.afs
+      .collection('tracks', (ref) =>
+        ref
+          .where('added_at_day', '==', today.getDay())
+          .where('added_at_hours', '==', today.getHours())
+      )
+      .valueChanges();
+  }
+
   private limitTrackAmount(trackUris?: string[]): string[] {
     // Not documented by spotify but it looks like there is a limit around 700 tracks
     const urisLimit = 700;
     if (trackUris?.length > urisLimit)
       trackUris = trackUris.slice(0, urisLimit - 1);
     return trackUris;
-  }
-
-  private putRequests(baseUrl: string, queryParam: string, body: Object) {
-    return this.headers$.pipe(
-      switchMap((headers) =>
-        this.http.put(`${baseUrl + queryParam}`, body, {
-          headers,
-        })
-      )
-    );
   }
 
   private get headers$(): Observable<HttpHeaders> {
@@ -144,7 +178,7 @@ export class SpotifyService {
           3600
         ) {
           console.log('refreshing token');
-          await this.getRefreshToken();
+          this.refreshTokenAndInitializePlayer();
         }
       }),
       map((user) =>
@@ -153,57 +187,23 @@ export class SpotifyService {
     );
   }
 
-  public async getAccessTokenAndInitializePlayer(code: string) {
-    // get token & save it on db
-    const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
-    this.afAuth.user
+  private async userAvailableDevices(): Promise<Devices> {
+    const url = 'https://api.spotify.com/v1/me/player/devices';
+    return await this.headers$
       .pipe(
-        tap((user) => {
-          getTokenFunction({
-            code: code,
-            tokenType: 'access',
-            userId: user.uid,
-          })
-            .pipe(first())
-            .subscribe((_) =>
-              this.initializePlayer().catch((err) => console.log(err))
-            );
-        }),
+        switchMap(
+          (headers) => this.http.get(url, { headers }) as Observable<Devices>
+        ),
         first()
       )
-      .subscribe();
+      .toPromise();
   }
 
-  public async getRefreshToken() {
-    const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
-    this.afAuth.user
-      .pipe(
-        switchMap((authUser) => {
-          const userDoc = this.afs.doc<User>(`users/${authUser.uid}`);
-          return userDoc.valueChanges();
-        }),
-        map((dbUser) => {
-          return getTokenFunction({
-            userId: dbUser.id,
-            refreshToken: dbUser.tokens.refresh,
-            tokenType: 'refresh',
-          })
-            .pipe(first())
-            .subscribe();
-        }),
-        first()
+  private putRequests(baseUrl: string, queryParam: string, body: Object) {
+    return this.headers$.pipe(
+      switchMap((headers) =>
+        this.http.put(`${baseUrl + queryParam}`, body, { headers })
       )
-      .subscribe();
-  }
-
-  get filteredTracks$() {
-    const today = new Date();
-    return this.afs
-      .collection('tracks', (ref) =>
-        ref
-          .where('added_at_day', '==', today.getDay())
-          .where('added_at_hours', '==', today.getHours())
-      )
-      .valueChanges();
+    );
   }
 }

@@ -14,7 +14,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { SpotifyService } from '../spotify/spotify.service';
 import { AuthService } from '../auth/auth.service';
 // Models
-import { Track } from '../spotify/track.model';
+import { Track } from '../spotify/spotify.model';
 // Components
 import { DialogComponent } from '../dialog/dialog.component';
 
@@ -64,7 +64,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
       });
   }
 
-  ngOnInit(): void {
+  ngOnInit() {
     // if user isn't connected, open dialog to create one
     this.afAuth.user
       .pipe(
@@ -90,22 +90,14 @@ export class HomepageComponent implements OnInit, OnDestroy {
   }
 
   getAccessTokenWithCodeAndInstantiatePlayer(event: RouterEvent) {
+    console.log('getting access token');
     const code = event.url.substring(event.url.indexOf('=') + 1);
     this.spotifyService.getAccessTokenAndInitializePlayer(code);
   }
 
-  refreshTokenAndInstantiatePlayer() {
-    this.spotifyService
-      .getRefreshToken()
-      .then(
-        (
-          _ // instantiate the player
-        ) =>
-          this.spotifyService
-            .initializePlayer()
-            .catch((err) => console.log(err))
-      )
-      .catch((err) => console.log(err));
+  async refreshTokenAndInstantiatePlayer() {
+    console.log('refreshing token');
+    this.spotifyService.refreshTokenAndInitializePlayer();
   }
 
   async play() {
@@ -119,21 +111,18 @@ export class HomepageComponent implements OnInit, OnDestroy {
   }
 
   private playTracks() {
-    // animation & audio
     this.playAudio('../../assets/vinyle_start.wav');
     this.changeBackground('url(../../assets/play.gif)');
 
     this.isPlaying = true;
 
     setTimeout(() => {
-      // set playing animation when play animation is over
       this.changeBackground('url(../../assets/playing.gif)');
-      // get according tracks & play
+
       this.spotifyService.filteredTracks$
         .pipe(
           tap((tracks: Track[]) => {
             let uris = tracks.map((track) => track.uri);
-            // randomize tracks
             uris = this.shuffleArray(uris);
             this.spotifyService.playSpotify(uris);
           }),
@@ -144,13 +133,11 @@ export class HomepageComponent implements OnInit, OnDestroy {
   }
 
   private pause() {
-    // animation & audio
     this.playAudio('../../assets/vinyle_end.wav');
     this.changeBackground('url(../../assets/pause.gif)');
     this.isPlaying = false;
 
     setTimeout(() => {
-      // set start animation when pause animation is over
       this.changeBackground('url(../../assets/start.gif)');
       this.spotifyService.pause();
     }, 3000);

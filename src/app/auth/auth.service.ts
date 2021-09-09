@@ -19,9 +19,11 @@ export class AuthService {
   private clientId: string = environment.spotify.clientId;
   private responseType: string = environment.spotify.responseType;
   private redirectURI = environment.spotify.redirectURI;
-  private scope = ['streaming', 'user-read-email', 'user-read-private'].join(
-    '%20'
-  );
+  private scope = [
+    'streaming',
+    'user-read-playback-state',
+    'user-modify-playback-state',
+  ].join('%20');
   constructor(private afAuth: AngularFireAuth, private afs: AngularFirestore) {}
 
   get user$(): Observable<User> {
