@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "nova-jukebox"
+    "default": "nova-jukebox",
+    "dev": "nova-jukebox-dev"
   }
 }

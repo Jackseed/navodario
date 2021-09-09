@@ -11,13 +11,12 @@ export const environment = {
     redirectURI: 'http://localhost:4200',
   },
   firebaseConfig: {
-    apiKey: 'AIzaSyBc4oEqQ_J5vJIyZys630Z3RCQpZJn2E9o',
-    authDomain: 'nova-jukebox.firebaseapp.com',
-    projectId: 'nova-jukebox',
-    storageBucket: 'nova-jukebox.appspot.com',
-    messagingSenderId: '960630257139',
-    appId: '1:960630257139:web:a068fecd4d6d13c3974e86',
-    measurementId: 'G-NTMEGQ3X5F',
+    apiKey: 'AIzaSyA4tisWY2LHSngQ8kgH9niQYxuUYmOb5Bs',
+    authDomain: 'nova-jukebox-dev.firebaseapp.com',
+    projectId: 'nova-jukebox-dev',
+    storageBucket: 'nova-jukebox-dev.appspot.com',
+    messagingSenderId: '134869899173',
+    appId: '1:134869899173:web:4b506fc25a48a9f62a3a4c',
   },
 };
 

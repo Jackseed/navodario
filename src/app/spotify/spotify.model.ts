@@ -58,3 +58,22 @@ export interface WebPlaybackTrack {
   };
   artists: { uri: string; name: string }[];
 }
+
+export interface Devices {
+  devices: Device[];
+}
+
+export interface Device {
+  id: string;
+  is_active: boolean;
+  is_private_session: boolean;
+  is_restricted: boolean;
+  name: string;
+  type: string;
+  volume_percent: number;
+}
+
+export interface Tokens {
+  token: string;
+  refresh_token: string;
+}
