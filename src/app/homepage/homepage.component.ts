@@ -89,15 +89,15 @@ export class HomepageComponent implements OnInit, OnDestroy {
       .subscribe();
   }
 
-  getAccessTokenWithCodeAndInstantiatePlayer(event: RouterEvent) {
-    console.log('getting access token');
+  async getAccessTokenWithCodeAndInstantiatePlayer(event: RouterEvent) {
     const code = event.url.substring(event.url.indexOf('=') + 1);
-    this.spotifyService.getAccessTokenAndInitializePlayer(code);
+    await this.spotifyService.getToken(code);
+    this.spotifyService.initializePlayer();
   }
 
   async refreshTokenAndInstantiatePlayer() {
-    console.log('refreshing token');
-    this.spotifyService.refreshTokenAndInitializePlayer();
+    await this.spotifyService.getToken();
+    this.spotifyService.initializePlayer();
   }
 
   async play() {

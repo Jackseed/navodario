@@ -7,18 +7,18 @@ import firebase from 'firebase/app';
 import { AngularFirestore } from '@angular/fire/firestore';
 import { AngularFireFunctions } from '@angular/fire/functions';
 // Rxjs
-import { Observable, of } from 'rxjs';
-import { catchError, first, map, switchMap, tap } from 'rxjs/operators';
+import { first } from 'rxjs/operators';
 // Services
 import { AuthService } from '../auth/auth.service';
 // Models
-import { Devices, WebPlaybackState } from './spotify.model';
+import { Devices, Tokens, WebPlaybackState } from './spotify.model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SpotifyService {
   private deviceId: string;
+
   constructor(
     private afs: AngularFirestore,
     private authService: AuthService,
@@ -28,14 +28,13 @@ export class SpotifyService {
   ) {}
 
   public async initializePlayer() {
-    console.log('initializing player');
     // @ts-ignore: Unreachable code error
     const { Player } = await this.waitForSpotifyWebPlaybackSDKToLoad();
     const user = await this.authService.getUser();
 
     const player = new Player({
       name: 'Nova Jukebox',
-      getOAuthToken: (callback) => {
+      getOAuthToken: (callback: any) => {
         const token = user.tokens.access;
         callback(token);
       },
@@ -95,12 +94,7 @@ export class SpotifyService {
     const body = trackUris ? { uris: trackUris } : null;
     const queryParam = deviceId && trackUris ? `?device_id=${deviceId}` : '';
 
-    this.putRequests(baseUrl, queryParam, body)
-      .pipe(
-        catchError((err) => of(console.log(err))),
-        first()
-      )
-      .subscribe();
+    this.putRequests(baseUrl, queryParam, body);
   }
 
   private async isDeviceExisting(): Promise<boolean> {
@@ -115,37 +109,36 @@ export class SpotifyService {
     return deviceExists;
   }
 
+  private async userAvailableDevices(): Promise<Devices> {
+    const headers = await this.getHeaders();
+    const url = 'https://api.spotify.com/v1/me/player/devices';
+    return this.http
+      .get(url, { headers })
+      .pipe(first())
+      .toPromise() as Promise<Devices>;
+  }
+
   public async pause() {
     const baseUrl = 'https://api.spotify.com/v1/me/player/pause';
 
-    return this.putRequests(baseUrl, '', null).pipe(first()).subscribe();
+    return this.putRequests(baseUrl, '', null);
   }
 
-  // Get access token, save it on db, then initialize player
-  public async getAccessTokenAndInitializePlayer(code: string) {
+  // get & save access token if code as param, otherwise refresh
+  public async getToken(code?: string): Promise<Tokens> {
     const user = await this.authService.getUser();
     const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
+    let param: Object;
 
-    getTokenFunction({
-      code: code,
-      tokenType: 'access',
-      userId: user.id,
-    })
-      .pipe(first())
-      .subscribe((_) => this.initializePlayer());
-  }
+    code
+      ? (param = { code: code, tokenType: 'access', userId: user.id })
+      : (param = {
+          tokenType: 'refresh',
+          refreshToken: user.tokens.refresh,
+          userId: user.id,
+        });
 
-  // Get refresh token, save it on db, then initialize player
-  public async refreshTokenAndInitializePlayer() {
-    const user = await this.authService.getUser();
-    const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
-    getTokenFunction({
-      userId: user.id,
-      refreshToken: user.tokens.refresh,
-      tokenType: 'refresh',
-    })
-      .pipe(first())
-      .subscribe((_) => this.initializePlayer());
+    return getTokenFunction(param).pipe(first()).toPromise();
   }
 
   get filteredTracks$() {
@@ -167,43 +160,30 @@ export class SpotifyService {
     return trackUris;
   }
 
-  private get headers$(): Observable<HttpHeaders> {
-    const user$ = this.authService.user$;
-    return user$.pipe(
-      tap(async (user) => {
-        if (
-          (firebase.firestore.Timestamp.now().toMillis() -
-            user.tokens.addedTime.toMillis()) /
-            1000 >
-          3600
-        ) {
-          console.log('refreshing token');
-          this.refreshTokenAndInitializePlayer();
-        }
-      }),
-      map((user) =>
-        new HttpHeaders().set('Authorization', 'Bearer ' + user.tokens.access)
-      )
-    );
+  private async getHeaders(): Promise<HttpHeaders> {
+    const user = await this.authService.getUser();
+    let token = user.tokens.access;
+
+    const tokenCreationTime =
+      (firebase.firestore.Timestamp.now().toMillis() -
+        user.tokens.addedTime.toMillis()) /
+      1000;
+
+    if (tokenCreationTime > 3600) {
+      token = (await this.getToken()).token;
+    }
+
+    const headers = new HttpHeaders().set('Authorization', 'Bearer ' + token);
+
+    return headers;
   }
 
-  private async userAvailableDevices(): Promise<Devices> {
-    const url = 'https://api.spotify.com/v1/me/player/devices';
-    return await this.headers$
-      .pipe(
-        switchMap(
-          (headers) => this.http.get(url, { headers }) as Observable<Devices>
-        ),
-        first()
-      )
+  private async putRequests(baseUrl: string, queryParam: string, body: Object) {
+    const headers = await this.getHeaders();
+
+    return this.http
+      .put(`${baseUrl + queryParam}`, body, { headers })
+      .pipe(first())
       .toPromise();
-  }
-
-  private putRequests(baseUrl: string, queryParam: string, body: Object) {
-    return this.headers$.pipe(
-      switchMap((headers) =>
-        this.http.put(`${baseUrl + queryParam}`, body, { headers })
-      )
-    );
   }
 }

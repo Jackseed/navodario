@@ -24,6 +24,7 @@ export class AuthService {
     'user-read-playback-state',
     'user-modify-playback-state',
   ].join('%20');
+
   constructor(private afAuth: AngularFireAuth, private afs: AngularFirestore) {}
 
   get user$(): Observable<User> {

@@ -72,3 +72,8 @@ export interface Device {
   type: string;
   volume_percent: number;
 }
+
+export interface Tokens {
+  token: string;
+  refresh_token: string;
+}
