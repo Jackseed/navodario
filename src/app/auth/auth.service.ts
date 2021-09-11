@@ -21,6 +21,8 @@ export class AuthService {
   private redirectURI = environment.spotify.redirectURI;
   private scope = [
     'streaming',
+    'user-read-email',
+    'user-read-private',
     'user-read-playback-state',
     'user-modify-playback-state',
   ].join('%20');
