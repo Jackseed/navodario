@@ -79,10 +79,14 @@ export class HomepageComponent implements OnInit, OnDestroy {
       .pipe(
         // wait for redirection to be ended
         filter((event) => event instanceof NavigationEnd),
-        tap((event: RouterEvent) => {
+        tap(async (event: RouterEvent) => {
+          const user = await this.authService.getUser();
+
           event.url.includes('code')
             ? this.getAccessTokenWithCodeAndInstantiatePlayer(event)
-            : this.refreshTokenAndInstantiatePlayer();
+            : user.tokens
+            ? this.refreshTokenAndInstantiatePlayer()
+            : this.openDialog();
         }),
         first()
       )
