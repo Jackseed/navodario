@@ -164,7 +164,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
       height: this.dialogHeight,
       maxHeight: this.dialogHeight,
     });
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async () => {
       await this.authService.anonymousLogin();
     });
   }

@@ -34,8 +34,11 @@ export class SpotifyService {
 
     const player = new Player({
       name: 'Nova Jukebox',
-      getOAuthToken: (callback: any) => {
-        const token = user.tokens.access;
+      getOAuthToken: async (callback: any) => {
+        let token = user.tokens.access;
+
+        if (!this.isTokenStillValid()) token = (await this.getToken()).token;
+
         callback(token);
       },
     });
@@ -93,7 +96,8 @@ export class SpotifyService {
     const baseUrl = 'https://api.spotify.com/v1/me/player/play';
     const body = trackUris ? { uris: trackUris } : null;
     const queryParam = deviceId && trackUris ? `?device_id=${deviceId}` : '';
-
+    console.log('playing with deviceId: ', deviceId);
+    
     this.putRequests(baseUrl, queryParam, body);
   }
 
@@ -160,18 +164,27 @@ export class SpotifyService {
     return trackUris;
   }
 
-  private async getHeaders(): Promise<HttpHeaders> {
+  private async isTokenStillValid(): Promise<boolean> {
     const user = await this.authService.getUser();
-    let token = user.tokens.access;
+    let isTokenStillValid: boolean;
 
     const tokenCreationTime =
       (firebase.firestore.Timestamp.now().toMillis() -
         user.tokens.addedTime.toMillis()) /
       1000;
 
-    if (tokenCreationTime > 3600) {
-      token = (await this.getToken()).token;
-    }
+    tokenCreationTime > 3600
+      ? (isTokenStillValid = false)
+      : (isTokenStillValid = true);
+
+    return isTokenStillValid;
+  }
+
+  private async getHeaders(): Promise<HttpHeaders> {
+    const user = await this.authService.getUser();
+    let token = user.tokens.access;
+
+    if (!this.isTokenStillValid()) token = (await this.getToken()).token;
 
     const headers = new HttpHeaders().set('Authorization', 'Bearer ' + token);
 
