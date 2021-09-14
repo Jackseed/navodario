@@ -130,7 +130,7 @@ export class SpotifyService {
     devices.devices.forEach((device) => {
       if (user.deviceId === device.id) deviceExists = true;
     });
-    
+
     return deviceExists;
   }
 
