@@ -74,7 +74,7 @@ export const saveNovaEveryFiveMinutes = functions.pubsub
   });
 
 /// PUB SUB: SAVE & DELETE EVERY WEEK EVERY DAY 06:00 AM
-export const saveAndDeleteNovaEveryWeek = functions
+export const saveAndDeleteNovaEveryDay = functions
   .runWith({
     timeoutSeconds: 500,
   })

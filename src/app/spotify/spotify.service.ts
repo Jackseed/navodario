@@ -17,8 +17,6 @@ import { Devices, Tokens, WebPlaybackState } from './spotify.model';
   providedIn: 'root',
 })
 export class SpotifyService {
-  private deviceId: string;
-
   constructor(
     private afs: AngularFirestore,
     private authService: AuthService,
@@ -27,7 +25,8 @@ export class SpotifyService {
     private title: Title
   ) {}
 
-  public async initializePlayer() {
+  //////////////////////// PLAYER INITIALIZATION /////////////////////////////////
+  public async initializePlayer(trackUris?: string[]) {
     // @ts-ignore: Unreachable code error
     const { Player } = await this.waitForSpotifyWebPlaybackSDKToLoad();
     const user = await this.authService.getUser();
@@ -36,8 +35,9 @@ export class SpotifyService {
       name: 'Nova Jukebox',
       getOAuthToken: async (callback: any) => {
         let token = user.tokens.access;
+        const isTokenValid = await this.isTokenStillValid();
 
-        if (!this.isTokenStillValid()) token = (await this.getToken()).token;
+        if (!isTokenValid) token = (await this.getToken()).token;
 
         callback(token);
       },
@@ -46,9 +46,29 @@ export class SpotifyService {
     await player.connect();
 
     // Set device id
-    player.addListener('ready', ({ device_id }) => {
-      this.deviceId = device_id;
-      this.saveDeviceId(user.id, device_id);
+    player.addListener('ready', async ({ device_id }) => {
+      await this.saveDeviceId(user.id, device_id);
+
+      console.log('Device ready', device_id);
+
+      if (trackUris) this.playSpotify(trackUris);
+    });
+
+    player.addListener('not_ready', ({ device_id }) => {
+      console.log('Device ID has gone offline', device_id);
+      this.initializePlayer();
+    });
+
+    player.addListener('initialization_error', ({ message }) => {
+      console.error(message);
+    });
+
+    player.addListener('authentication_error', ({ message }) => {
+      console.error(message);
+    });
+
+    player.addListener('account_error', ({ message }) => {
+      console.error(message);
     });
 
     // Set page title on track change
@@ -80,24 +100,25 @@ export class SpotifyService {
     return this.afs.collection('users').doc(userId).update({ deviceId });
   }
 
-  public async playSpotify(trackUris?: string[]): Promise<void> {
+  //////////////////////// PLAY /////////////////////////////////
+  public async playSpotify(trackUris: string[]): Promise<void> {
     let user = await this.authService.getUser();
     let deviceId = user.deviceId;
 
-    // verify that deviceId is still valid, otherwise update it
+    // verify that deviceId is still valid, otherwise update it and relaunch play
     const deviceExists = await this.isDeviceExisting();
     if (!deviceExists) {
-      await this.initializePlayer();
-      deviceId = this.deviceId;
+      await this.initializePlayer(trackUris);
+      return;
     }
 
     // prepare and send play request
-    if (trackUris) trackUris = this.limitTrackAmount(trackUris);
+    trackUris = this.limitTrackAmount(trackUris);
+
     const baseUrl = 'https://api.spotify.com/v1/me/player/play';
-    const body = trackUris ? { uris: trackUris } : null;
-    const queryParam = deviceId && trackUris ? `?device_id=${deviceId}` : '';
-    console.log('playing with deviceId: ', deviceId);
-    
+    const body = { uris: trackUris };
+    const queryParam = `?device_id=${deviceId}`;
+
     this.putRequests(baseUrl, queryParam, body);
   }
 
@@ -109,7 +130,7 @@ export class SpotifyService {
     devices.devices.forEach((device) => {
       if (user.deviceId === device.id) deviceExists = true;
     });
-
+    
     return deviceExists;
   }
 
@@ -128,6 +149,7 @@ export class SpotifyService {
     return this.putRequests(baseUrl, '', null);
   }
 
+  //////////////////////// GET TOKEN /////////////////////////////////
   // get & save access token if code as param, otherwise refresh
   public async getToken(code?: string): Promise<Tokens> {
     const user = await this.authService.getUser();
@@ -145,6 +167,7 @@ export class SpotifyService {
     return getTokenFunction(param).pipe(first()).toPromise();
   }
 
+  //////////////////////// TRACKS /////////////////////////////////
   get filteredTracks$() {
     const today = new Date();
     return this.afs
@@ -164,6 +187,18 @@ export class SpotifyService {
     return trackUris;
   }
 
+  private async getHeaders(): Promise<HttpHeaders> {
+    const user = await this.authService.getUser();
+    let token = user.tokens.access;
+    const isTokenValid = await this.isTokenStillValid();
+
+    if (!isTokenValid) token = (await this.getToken()).token;
+
+    const headers = new HttpHeaders().set('Authorization', 'Bearer ' + token);
+
+    return headers;
+  }
+
   private async isTokenStillValid(): Promise<boolean> {
     const user = await this.authService.getUser();
     let isTokenStillValid: boolean;
@@ -178,17 +213,6 @@ export class SpotifyService {
       : (isTokenStillValid = true);
 
     return isTokenStillValid;
-  }
-
-  private async getHeaders(): Promise<HttpHeaders> {
-    const user = await this.authService.getUser();
-    let token = user.tokens.access;
-
-    if (!this.isTokenStillValid()) token = (await this.getToken()).token;
-
-    const headers = new HttpHeaders().set('Authorization', 'Bearer ' + token);
-
-    return headers;
   }
 
   private async putRequests(baseUrl: string, queryParam: string, body: Object) {
