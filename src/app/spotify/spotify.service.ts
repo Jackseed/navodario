@@ -75,7 +75,7 @@ export class SpotifyService {
       state.paused
         ? this.title.setTitle('Nova Jukebox')
         : this.title.setTitle(
-            `${state.track_window.current_track.artists[0].name} - ${state.track_window.current_track.name}`
+            `${state.track_window.current_track.name} - ${state.track_window.current_track.artists[0].name}`
           );
     });
   }

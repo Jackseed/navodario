@@ -1,12 +1,17 @@
-<h2 mat-dialog-title>Hit that jukebox!</h2>
+<h1>Hit that jukebox!</h1>
 <mat-dialog-content>
-  <p>It will play a mix of tracks played by Radio Nova on same hour and day.</p>
-  <p>
-    If you want to change tracks, play the jukebox again or skip it within
-    Spotify.
-  </p>
-  <p>But first we need to plug Spotify.</p>
+  <span
+    >It will play a mix of tracks played by
+    <a href="https://nova.fr" target="_blank">Radio Nova</a> on same hour, same
+    day.</span
+  >
+  <span>
+    To change tracks, hit the jukebox again or skip it with Spotify.
+  </span>
+  <p>To start you need to plug Spotify.</p>
 </mat-dialog-content>
 <mat-dialog-actions align="center">
-  <button mat-raised-button mat-dialog-close>Connect to Spotify</button>
+  <button mat-raised-button mat-dialog-close color="accent">
+    <span class="bold">Connect to Spotify</span>
+  </button>
 </mat-dialog-actions>
