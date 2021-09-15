@@ -1,13 +1,17 @@
-<h2 mat-dialog-title>Welcome Stranger!</h2>
+<h1>Hit that jukebox!</h1>
 <mat-dialog-content>
-  <p>
-    This website is cookie & ad free but it works with Spotify. They are kind
-    enough to lend their web player as long as you are a paying customer. That's
-    what I need to validate by making you loggin there. After that we're good to
-    go.
-  </p>
-  <p>Hit that jukebox!</p>
+  <span
+    >It will play a mix of tracks played by
+    <a href="https://nova.fr" target="_blank">Radio Nova</a> on same hour, same
+    day.</span
+  >
+  <span>
+    To change tracks, hit the jukebox again or skip it with Spotify.
+  </span>
+  <p>To start you need to plug Spotify.</p>
 </mat-dialog-content>
-<mat-dialog-actions align="end">
-  <button mat-raised-button mat-dialog-close>Alright got it!</button>
+<mat-dialog-actions align="center">
+  <button mat-raised-button mat-dialog-close color="accent">
+    <span class="bold">Connect to Spotify</span>
+  </button>
 </mat-dialog-actions>

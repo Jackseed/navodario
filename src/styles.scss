@@ -3,5 +3,33 @@ html {
   margin: 0;
 }
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Lobster", cursive;
+}
+
+p,
+span {
+  font-family: "Raleway", sans-serif;
+}
+
+a {
+  color: white;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+a:focus {
+  outline: none;
+}
