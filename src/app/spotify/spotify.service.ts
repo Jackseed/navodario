@@ -34,10 +34,7 @@ export class SpotifyService {
     const player = new Player({
       name: 'Nova Jukebox',
       getOAuthToken: async (callback: any) => {
-        let token = user.tokens.access;
-        const isTokenValid = await this.isTokenStillValid();
-
-        if (!isTokenValid) token = (await this.getToken()).token;
+        const token = (await this.getToken()).token;
 
         callback(token);
       },
