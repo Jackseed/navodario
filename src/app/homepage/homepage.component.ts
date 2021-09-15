@@ -37,6 +37,11 @@ export class HomepageComponent implements OnInit, OnDestroy {
   private dialogHeight: string;
   private isPlaying = false;
   private startTime = 0;
+  private gifs = [
+    '/assets/play.gif',
+    '/assets/pause.gif',
+    '/assets/playing.gif',
+  ];
 
   constructor(
     private router: Router,
@@ -65,6 +70,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.loadGifs();
     // if user isn't connected, open dialog to create one
     this.afAuth.user
       .pipe(
@@ -91,6 +97,13 @@ export class HomepageComponent implements OnInit, OnDestroy {
         first()
       )
       .subscribe();
+  }
+
+  private loadGifs() {
+    for (let i = 0; i < this.gifs.length; i++) {
+      let gif = new Image();
+      gif.src = this.gifs[i];
+    }
   }
 
   async getAccessTokenWithCodeAndInstantiatePlayer(event: RouterEvent) {
