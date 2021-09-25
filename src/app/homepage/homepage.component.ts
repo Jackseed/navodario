@@ -14,7 +14,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { SpotifyService } from '../spotify/spotify.service';
 import { AuthService } from '../auth/auth.service';
 // Models
-import { Track } from '../spotify/spotify.model';
+import { Tokens, Track } from '../spotify/spotify.model';
 // Components
 import { DialogComponent } from '../dialog/dialog.component';
 
@@ -89,9 +89,11 @@ export class HomepageComponent implements OnInit, OnDestroy {
           const user = await this.authService.getUser();
           if (user)
             event.url.includes('code')
-              ? this.getAccessTokenWithCodeAndInstantiatePlayer(event)
+              ? await this.getAccessTokenWithCode(
+                  event.url.substring(event.url.indexOf('=') + 1)
+                )
               : user.tokens
-              ? this.refreshTokenAndInstantiatePlayer()
+              ? await this.refreshToken()
               : this.openDialog();
         }),
         first()
@@ -106,15 +108,12 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }
   }
 
-  async getAccessTokenWithCodeAndInstantiatePlayer(event: RouterEvent) {
-    const code = event.url.substring(event.url.indexOf('=') + 1);
-    await this.spotifyService.getToken(code);
-    this.spotifyService.initializePlayer();
+  async getAccessTokenWithCode(code: string): Promise<Tokens> {
+    return this.spotifyService.getToken(code);
   }
 
-  async refreshTokenAndInstantiatePlayer() {
-    await this.spotifyService.getToken();
-    this.spotifyService.initializePlayer();
+  async refreshToken(): Promise<Tokens> {
+    return this.spotifyService.getToken();
   }
 
   async play() {
