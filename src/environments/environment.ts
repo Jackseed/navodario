@@ -18,6 +18,9 @@ export const environment = {
     messagingSenderId: '134869899173',
     appId: '1:134869899173:web:4b506fc25a48a9f62a3a4c',
   },
+  sentry: {
+    dsn: ''
+  }
 };
 
 /*

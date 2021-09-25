@@ -15,4 +15,7 @@ export const environment = {
     appId: '1:960630257139:web:a068fecd4d6d13c3974e86',
     measurementId: 'G-NTMEGQ3X5F',
   },
+  sentry: {
+    dsn: 'https://b7e0682855ae4198a301b27b6ae28fd7@o1005951.ingest.sentry.io/5966427',
+  },
 };

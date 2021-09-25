@@ -12,27 +12,27 @@ admin.initializeApp();
 const nova = [
   {
     novaChannel: 'Radio Nova',
-    playlistId: '1fCjGw7LvjkHuHQFvkwfA8',
+    playlistId: '5n4YjXr8CReTshU81kTIJd',
     frequence: '910',
   },
   {
     novaChannel: 'Nouvo nova',
-    playlistId: '0SpEhrGn9oz15QVwB3wf6A',
+    playlistId: '3MRJIbMsOLRn4Hd5w1J5By',
     frequence: '79676',
   },
   {
     novaChannel: 'Nova la nuit',
-    playlistId: '2aNLb039MKg2M3Mq6cjKlb',
+    playlistId: '3p5vpBknVeAp4RYguJc73H',
     frequence: '916',
   },
   {
     novaChannel: 'Nova classics',
-    playlistId: '5LwD8Kiza45zqxNLb5wagT',
+    playlistId: '0AWDMBAIptCWKCMYlbHA1D',
     frequence: '913',
   },
   {
     novaChannel: 'Nova danse',
-    playlistId: '6GMql0jVg5605aDX6ZwTpw',
+    playlistId: '4HpjRXEpxG5UEdOrk7FVFS',
     frequence: '560',
   },
 ];
@@ -167,8 +167,10 @@ async function scrapeNovaTrackIds(radioValue: string): Promise<string[]> {
 
   // go to Nova
   await page.goto('https://www.nova.fr/c-etait-quoi-ce-titre/');
+
   // accept cookies
-  await page.click('[id="didomi-notice-agree-button"]');
+  if ((await page.$('[id="didomi-notice-agree-button"]')) !== null)
+    await page.click('[id="didomi-notice-agree-button"]');
   // select nouvo nova radio
   await page.select('#radio', radioValue);
 
@@ -224,11 +226,13 @@ exports.saveNovaOnSpotify = functions
 
     // filter nova trackIds with duplicates
     const filteredIds = trackIds.filter(
-      (id) => !playlistLastTrackIds.includes(id)
+      (id: string) => !playlistLastTrackIds.includes(id)
     );
 
     // format uris
-    const uris = filteredIds.map((id) => `spotify:track:${id}`).reverse();
+    const uris = filteredIds
+      .map((id: string) => `spotify:track:${id}`)
+      .reverse();
 
     const response = await saveTracksToPlaylist(
       headers,
