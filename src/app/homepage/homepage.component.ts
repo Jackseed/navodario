@@ -51,7 +51,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     private spotifyService: SpotifyService,
     private authService: AuthService
   ) {
-    // responsive dialog size
+    // Media query for a responsive login dialog.
     this.watcher = this.mediaObserver
       .asObservable()
       .pipe(
@@ -71,7 +71,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadGifs();
-    // if user isn't connected, open dialog to create one
+    // If user isn't connected, opens dialog to create one.
     this.afAuth.user
       .pipe(
         filter((user) => !!!user),
@@ -80,10 +80,10 @@ export class HomepageComponent implements OnInit, OnDestroy {
       )
       .subscribe();
 
-    // check for a code within url to know if it's a first connexion
+    // Checks for a code within url to know if it's a first connexion.
     this.router.events
       .pipe(
-        // wait for redirection to be ended
+        // Waits for redirection to be ended before checking url for a Spotify access code.
         filter((event) => event instanceof NavigationEnd),
         tap(async (event: RouterEvent) => {
           const user = await this.authService.getUser();
@@ -92,7 +92,8 @@ export class HomepageComponent implements OnInit, OnDestroy {
               ? await this.getAccessTokenWithCode(
                   event.url.substring(event.url.indexOf('=') + 1)
                 )
-              : user.tokens
+              : // If there is no code within url and a user exists, refreshes Spotify access token.
+              user.tokens
               ? await this.refreshToken()
               : this.openLoginDialog();
         }),
@@ -101,6 +102,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
       .subscribe();
   }
 
+  // Pre-loads gifs to avoid glitches.
   private loadGifs() {
     for (let i = 0; i < this.gifs.length; i++) {
       let gif = new Image();
@@ -108,14 +110,17 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Gets a Spotify access token with a code.
   private async getAccessTokenWithCode(code: string): Promise<Tokens> {
     return this.spotifyService.getToken(code);
   }
 
+  // Gets a Spotify refresh token based on an already registered access token.
   private async refreshToken(): Promise<Tokens> {
     return this.spotifyService.getToken();
   }
 
+  // Plays or pauses Spotify player depending on the context.
   public async play() {
     // add delay for animations to complete
     const delta = Date.now() - this.startTime;
@@ -126,6 +131,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     this.startTime = Date.now();
   }
 
+  // Activates an animation and plays tracks from same day and hour.
   private playTracks() {
     this.playAudio('../../assets/vinyle_start.wav');
     this.changeBackground('url(../../assets/play.gif)');
@@ -142,6 +148,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }, 2700);
   }
 
+  // Pauses Spotify player.
   private pause() {
     this.playAudio('../../assets/vinyle_end.wav');
     this.changeBackground('url(../../assets/pause.gif)');
@@ -153,11 +160,12 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }, 3000);
   }
 
+  // Changes the app background image.
   private changeBackground(img: string) {
     document.getElementById('image').style.backgroundImage = img;
   }
 
-  // spacebar as pause button
+  // Implements spacebar as play / pause button.
   @HostListener('document:keydown', ['$event']) onKeydownHandler(
     event: KeyboardEvent
   ) {
@@ -166,6 +174,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Opens a dialog that will redirect to Spotify auth and will login to Firebase.
   private openLoginDialog(): void {
     const dialogRef = this.dialog.open(DialogComponent, {
       width: this.dialogWidth,
@@ -178,7 +187,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     });
   }
 
-  // source: https://en.wikipedia.org/wiki/Fisher-Yates_shuffle#The_modern_algorithm
+  // Shuffles tracks using Fisher Yates modern algorithm.
   private shuffleArray(array: string[]): string[] {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -187,6 +196,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     return array;
   }
 
+  // Plays a turntable sound.
   private playAudio(src: string) {
     const audio = new Audio();
     audio.src = src;
