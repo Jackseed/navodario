@@ -89,9 +89,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
           const user = await this.authService.getUser();
           if (user)
             event.url.includes('code')
-              ? await this.getAccessTokenWithCode(
-                  event.url.substring(event.url.indexOf('=') + 1)
-                )
+              ? await this.getAccessTokenWithCode(this.getUrlCode(event.url))
               : // If there is no code within url and a user exists, refreshes Spotify access token.
               user.tokens
               ? await this.refreshToken()
@@ -100,6 +98,11 @@ export class HomepageComponent implements OnInit, OnDestroy {
         first()
       )
       .subscribe();
+  }
+
+  // Gets Spotify access code within url.
+  private getUrlCode(url: string): string {
+    return url.substring(url.indexOf('=') + 1);
   }
 
   // Pre-loads gifs to avoid glitches.
