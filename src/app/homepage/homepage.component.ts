@@ -14,7 +14,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { SpotifyService } from '../spotify/spotify.service';
 import { AuthService } from '../auth/auth.service';
 // Models
-import { Tokens, Track } from '../spotify/spotify.model';
+import { Tokens } from '../spotify/spotify.model';
 // Components
 import { DialogComponent } from '../dialog/dialog.component';
 
@@ -75,7 +75,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     this.afAuth.user
       .pipe(
         filter((user) => !!!user),
-        tap((_) => this.openDialog()),
+        tap((_) => this.openLoginDialog()),
         first()
       )
       .subscribe();
@@ -94,7 +94,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
                 )
               : user.tokens
               ? await this.refreshToken()
-              : this.openDialog();
+              : this.openLoginDialog();
         }),
         first()
       )
@@ -108,15 +108,15 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }
   }
 
-  async getAccessTokenWithCode(code: string): Promise<Tokens> {
+  private async getAccessTokenWithCode(code: string): Promise<Tokens> {
     return this.spotifyService.getToken(code);
   }
 
-  async refreshToken(): Promise<Tokens> {
+  private async refreshToken(): Promise<Tokens> {
     return this.spotifyService.getToken();
   }
 
-  async play() {
+  public async play() {
     // add delay for animations to complete
     const delta = Date.now() - this.startTime;
     if (delta < 3200) return;
@@ -132,19 +132,13 @@ export class HomepageComponent implements OnInit, OnDestroy {
 
     this.isPlaying = true;
 
-    setTimeout(() => {
+    setTimeout(async () => {
       this.changeBackground('url(../../assets/playing.gif)');
 
-      this.spotifyService.filteredTracks$
-        .pipe(
-          tap((tracks: Track[]) => {
-            let uris = tracks.map((track) => track.uri);
-            uris = this.shuffleArray(uris);
-            this.spotifyService.playSpotify(uris);
-          }),
-          first()
-        )
-        .subscribe();
+      const tracks = await this.spotifyService.filteredTracks$;
+      let uris = tracks.map((track) => track.uri);
+      uris = this.shuffleArray(uris);
+      this.spotifyService.playSpotify(uris);
     }, 2700);
   }
 
@@ -159,7 +153,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }, 3000);
   }
 
-  changeBackground(img: string) {
+  private changeBackground(img: string) {
     document.getElementById('image').style.backgroundImage = img;
   }
 
@@ -172,8 +166,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
     }
   }
 
-  // login dialog
-  openDialog(): void {
+  private openLoginDialog(): void {
     const dialogRef = this.dialog.open(DialogComponent, {
       width: this.dialogWidth,
       maxWidth: this.dialogWidth,

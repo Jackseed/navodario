@@ -11,7 +11,7 @@ import { first } from 'rxjs/operators';
 // Services
 import { AuthService } from '../auth/auth.service';
 // Models
-import { Devices, Tokens, WebPlaybackState } from './spotify.model';
+import { Devices, Tokens, Track, WebPlaybackState } from './spotify.model';
 
 @Injectable({
   providedIn: 'root',
@@ -165,7 +165,7 @@ export class SpotifyService {
   }
 
   //////////////////////// TRACKS /////////////////////////////////
-  get filteredTracks$() {
+  get filteredTracks$(): Promise<Track[]> {
     const today = new Date();
     return this.afs
       .collection('tracks', (ref) =>
@@ -173,7 +173,9 @@ export class SpotifyService {
           .where('added_at_day', '==', today.getDay())
           .where('added_at_hours', '==', today.getHours())
       )
-      .valueChanges();
+      .valueChanges()
+      .pipe(first())
+      .toPromise() as Promise<Track[]>;
   }
 
   private limitTrackAmount(trackUris?: string[]): string[] {
