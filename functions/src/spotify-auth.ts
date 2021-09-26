@@ -14,8 +14,7 @@ export async function getSpotifyToken(data: any, context: any) {
   ).toString('base64');
 
   const params = new URLSearchParams();
-  // Same function for either getting an access & refresh tokens.
-  // Through code and tokenType access or an access token through refresh token.
+  // Parameters change whether it's an access or a refresh token.
   if (data.tokenType === 'access') {
     params.append('grant_type', 'authorization_code');
     params.append('code', data.code);
@@ -35,6 +34,7 @@ export async function getSpotifyToken(data: any, context: any) {
   let token = '';
   let refresh_token = '';
 
+  // Requests token to Spotify.
   await axios
     .post('https://accounts.spotify.com/api/token', params, config)
     .then(
@@ -42,7 +42,6 @@ export async function getSpotifyToken(data: any, context: any) {
         token = response.data.access_token;
         if (data.tokenType === 'access') {
           refresh_token = response.data.refresh_token;
-          console.log(refresh_token);
         }
       },
       (error: any) => {

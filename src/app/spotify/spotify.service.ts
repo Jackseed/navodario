@@ -25,7 +25,9 @@ export class SpotifyService {
     private title: Title
   ) {}
 
-  //////////////////////// PLAYER INITIALIZATION /////////////////////////////////
+  //--------------------------------
+  //            PLAYER            //
+  //--------------------------------
   public async initializePlayer(trackUris?: string[]) {
     // @ts-ignore: Unreachable code error
     const { Player } = await this.waitForSpotifyWebPlaybackSDKToLoad();
@@ -42,7 +44,7 @@ export class SpotifyService {
 
     await player.connect();
 
-    // Set device id
+    // Sets device id
     player.addListener('ready', async ({ device_id }) => {
       await this.saveDeviceId(user.id, device_id);
 
@@ -68,7 +70,7 @@ export class SpotifyService {
       console.error(message);
     });
 
-    // Set page title on track change
+    // Sets page title on track change.
     player.on('player_state_changed', async (state: WebPlaybackState) => {
       if (!state) return;
 
@@ -80,7 +82,8 @@ export class SpotifyService {
     });
   }
 
-  // check if window.Spotify object has either already been defined, or check until window.onSpotifyWebPlaybackSDKReady has been fired
+  // Checks if window.Spotify object has either already been defined,
+  // or checks until window.onSpotifyWebPlaybackSDKReady has been fired.
   public async waitForSpotifyWebPlaybackSDKToLoad() {
     return new Promise((resolve) => {
       if (window.Spotify) {
@@ -93,23 +96,21 @@ export class SpotifyService {
     });
   }
 
-  private saveDeviceId(userId: string, deviceId: string): Promise<void> {
-    return this.afs.collection('users').doc(userId).update({ deviceId });
-  }
-
-  //////////////////////// PLAY /////////////////////////////////
+  //--------------------------------
+  //             PLAY             //
+  //--------------------------------
   public async playSpotify(trackUris: string[]): Promise<void> {
     let user = await this.authService.getUser();
     let deviceId = user.deviceId;
 
-    // verify that deviceId is still valid, otherwise update it and relaunch play
+    // Verifies that deviceId is still valid, otherwise updates it and relaunch play.
     const deviceExists = await this.isDeviceExisting();
     if (!deviceExists) {
       await this.initializePlayer(trackUris);
       return;
     }
 
-    // prepare and send play request
+    // Prepares and sends play request.
     trackUris = this.limitTrackAmount(trackUris);
 
     const baseUrl = 'https://api.spotify.com/v1/me/player/play';
@@ -117,6 +118,19 @@ export class SpotifyService {
     const queryParam = `?device_id=${deviceId}`;
 
     this.putRequests(baseUrl, queryParam, body);
+  }
+
+  public async pause() {
+    const baseUrl = 'https://api.spotify.com/v1/me/player/pause';
+
+    return this.putRequests(baseUrl, '', null);
+  }
+
+  //--------------------------------
+  //            DEVICE            //
+  //--------------------------------
+  private saveDeviceId(userId: string, deviceId: string): Promise<void> {
+    return this.afs.collection('users').doc(userId).update({ deviceId });
   }
 
   private async isDeviceExisting(): Promise<boolean> {
@@ -140,14 +154,10 @@ export class SpotifyService {
       .toPromise() as Promise<Devices>;
   }
 
-  public async pause() {
-    const baseUrl = 'https://api.spotify.com/v1/me/player/pause';
-
-    return this.putRequests(baseUrl, '', null);
-  }
-
-  //////////////////////// GET TOKEN /////////////////////////////////
-  // get & save access token if code as param, otherwise refresh
+  //--------------------------------
+  //             TOKEN            //
+  //--------------------------------
+  // Gets & saves access token if code as param, otherwise refreshes.
   public async getToken(code?: string): Promise<Tokens> {
     const user = await this.authService.getUser();
     const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
@@ -162,28 +172,6 @@ export class SpotifyService {
         });
 
     return getTokenFunction(param).pipe(first()).toPromise();
-  }
-
-  //////////////////////// TRACKS /////////////////////////////////
-  get filteredTracks$(): Promise<Track[]> {
-    const today = new Date();
-    return this.afs
-      .collection('tracks', (ref) =>
-        ref
-          .where('added_at_day', '==', today.getDay())
-          .where('added_at_hours', '==', today.getHours())
-      )
-      .valueChanges()
-      .pipe(first())
-      .toPromise() as Promise<Track[]>;
-  }
-
-  private limitTrackAmount(trackUris?: string[]): string[] {
-    // Not documented by spotify but it looks like there is a limit around 700 tracks
-    const urisLimit = 700;
-    if (trackUris?.length > urisLimit)
-      trackUris = trackUris.slice(0, urisLimit - 1);
-    return trackUris;
   }
 
   private async getHeaders(): Promise<HttpHeaders> {
@@ -213,7 +201,33 @@ export class SpotifyService {
 
     return isTokenStillValid;
   }
+  //--------------------------------
+  //            TRACKS            //
+  //--------------------------------
+  get filteredTracks$(): Promise<Track[]> {
+    const today = new Date();
+    return this.afs
+      .collection('tracks', (ref) =>
+        ref
+          .where('added_at_day', '==', today.getDay())
+          .where('added_at_hours', '==', today.getHours())
+      )
+      .valueChanges()
+      .pipe(first())
+      .toPromise() as Promise<Track[]>;
+  }
 
+  private limitTrackAmount(trackUris?: string[]): string[] {
+    // Not documented by Spotify but it looks like there is a limit around 700 tracks.
+    const urisLimit = 700;
+    if (trackUris?.length > urisLimit)
+      trackUris = trackUris.slice(0, urisLimit - 1);
+    return trackUris;
+  }
+
+  //--------------------------------
+  //             UTILS            //
+  //--------------------------------
   private async putRequests(baseUrl: string, queryParam: string, body: Object) {
     const headers = await this.getHeaders();
 
