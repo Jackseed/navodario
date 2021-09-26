@@ -1,12 +1,13 @@
 /* eslint-disable */
 import functions = require('firebase-functions');
+import { createFirebaseAccount } from './firestore-utils';
 const axios = require('axios').default;
 
 //--------------------------------
 //    Requests Spotify token    //
 //--------------------------------
 // Gets either an access or refresh Spotify token.
-export async function getSpotifyToken(data: any, context: any) {
+export async function getSpotifyToken(data: any) {
   const secret = Buffer.from(
     `${functions.config().spotify.clientid}:${
       functions.config().spotify.clientsecret
@@ -33,6 +34,8 @@ export async function getSpotifyToken(data: any, context: any) {
 
   let token = '';
   let refresh_token = '';
+  let custom_auth_token = '';
+  let userId = data.userId ? data.userId : '';
 
   // Requests token to Spotify.
   await axios
@@ -49,14 +52,26 @@ export async function getSpotifyToken(data: any, context: any) {
       }
     );
 
-  console.log('new version');
-  // If there is a refresh token, it's a first connexion
+  // Refresh token means first connexion.
   if (refresh_token) {
-    console.log('here');
+    // Create a user based on Spotify user info.
     await axios
-      .get('https://api.spotify.com/v1/me', config)
-      .then((response: any) => console.log(response))
-      .catch((error: any) => console.log(error.response.data));
+      .get('https://api.spotify.com/v1/me', {
+        headers: { Authorization: 'Bearer ' + token },
+      })
+      .then(async (response: any) => {
+        const uid = response.data.id;
+        const displayName = response.data.display_name;
+        const email = response.data.email;
+        userId = uid;
+
+        custom_auth_token = await createFirebaseAccount(
+          uid,
+          displayName,
+          email
+        );
+      })
+      .catch((error: any) => console.log(error));
   }
 
   // Saves tokens on Firestore.
@@ -69,12 +84,12 @@ export async function getSpotifyToken(data: any, context: any) {
       token,
       refreshToken: refresh_token,
       tokenType: data.tokenType,
-      userId: data.userId,
+      userId,
     },
     method: 'POST',
   }).catch((err: any) => console.log('error: ', err));
 
-  return { token, refresh_token };
+  return { token, refresh_token, custom_auth_token };
 }
 
 //--------------------------------
