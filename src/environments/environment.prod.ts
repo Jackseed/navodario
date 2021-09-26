@@ -1,5 +1,6 @@
 export const environment = {
   production: true,
+  useEmulators: false,
   spotify: {
     apiUrl: 'https://api.spotify.com/v1/me',
     clientId: 'ef247ad2b6a6480ab274d9f32b27dfe9',

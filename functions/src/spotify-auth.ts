@@ -45,9 +45,19 @@ export async function getSpotifyToken(data: any, context: any) {
         }
       },
       (error: any) => {
-        console.log('error: ', error);
+        console.log('error: ', error.response.data);
       }
     );
+
+  console.log('new version');
+  // If there is a refresh token, it's a first connexion
+  if (refresh_token) {
+    console.log('here');
+    await axios
+      .get('https://api.spotify.com/v1/me', config)
+      .then((response: any) => console.log(response))
+      .catch((error: any) => console.log(error.response.data));
+  }
 
   // Saves tokens on Firestore.
   await axios({

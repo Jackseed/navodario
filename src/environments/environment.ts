@@ -4,6 +4,7 @@
 
 export const environment = {
   production: false,
+  useEmulators: true,
   spotify: {
     apiUrl: 'https://api.spotify.com/v1/me',
     clientId: 'ef247ad2b6a6480ab274d9f32b27dfe9',
@@ -19,8 +20,8 @@ export const environment = {
     appId: '1:134869899173:web:4b506fc25a48a9f62a3a4c',
   },
   sentry: {
-    dsn: ''
-  }
+    dsn: '',
+  },
 };
 
 /*

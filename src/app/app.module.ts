@@ -10,6 +10,8 @@ import { HomepageComponent } from './homepage/homepage.component';
 import { DialogComponent } from './dialog/dialog.component';
 // Angular fire
 import { AngularFireModule } from '@angular/fire';
+
+import { USE_EMULATOR as USE_FUNCTIONS_EMULATOR } from '@angular/fire/functions';
 // Material
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -57,6 +59,11 @@ export class SentryErrorHandler implements ErrorHandler {
     {
       provide: ErrorHandler,
       useClass: SentryErrorHandler,
+    },
+
+    {
+      provide: USE_FUNCTIONS_EMULATOR,
+      useValue: environment.useEmulators ? ['localhost', 5001] : undefined,
     },
   ],
   bootstrap: [AppComponent],
