@@ -25,7 +25,7 @@ export async function saveTracks(req: any, res: any) {
     await batch
       .commit()
       .then((_: any) => console.log(`batch of ${i} saved`))
-      .catch((error: any) => console.log(error));
+      .catch((error: any) => console.log(error.response.data));
   }
   res.json({
     result: `Tracks successfully saved on Firestore, total tracks: ${tracks.length}.`,

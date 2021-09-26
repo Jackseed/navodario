@@ -40,8 +40,8 @@ export async function deletePlaylistTracks(req: any, res: any) {
           .then((response: any) => {
             console.log('response status: ', response.status);
           })
-          .catch((err: any) => {
-            console.log('error: ', err);
+          .catch((error: any) => {
+            console.log(error.response.data);
           });
       })
     )

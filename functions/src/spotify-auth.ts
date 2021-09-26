@@ -110,7 +110,7 @@ export async function getSpotifyAuthHeaders(): Promise<Object> {
         token = response.data.access_token;
       },
       (error: any) => {
-        console.log('error: ', error);
+        console.log(error.response.data);
       }
     );
 

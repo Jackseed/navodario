@@ -51,7 +51,7 @@ export class AuthService {
           )
           .subscribe();
       })
-      .catch((err) => console.log('login error ', err));
+      .catch((error) => console.log(error.response.data));
   }
 
   private setUser(id: string): Promise<void> {
