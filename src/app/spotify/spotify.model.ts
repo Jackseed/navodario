@@ -76,4 +76,5 @@ export interface Device {
 export interface Tokens {
   token: string;
   refresh_token: string;
+  custom_auth_token: string;
 }

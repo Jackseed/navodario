@@ -80,32 +80,49 @@ export class HomepageComponent implements OnInit, OnDestroy {
       )
       .subscribe();
 
+    this.afAuth.authState.subscribe((_) => console.log(_.uid));
     // Checks for a code within url to know if it's a first connexion.
     this.router.events
       .pipe(
         // Waits for redirection to be ended before checking url for a Spotify access code.
         filter((event) => event instanceof NavigationEnd),
         tap(async (event: RouterEvent) => {
-          const user = await this.authService.getUser();
-          if (user)
-            event.url.includes('code')
-              ? await this.getAccessTokenWithCode(this.getUrlCode(event.url))
-              : // If there is no code within url and a user exists, refreshes Spotify access token.
-              user.tokens
-              ? await this.refreshToken()
-              : this.openLoginDialog();
+          if (event.url.includes('code')) {
+            const tokens = await this.getAccessTokenWithCode(
+              this.getUrlCode(event.url)
+            );
+            console.log(tokens.custom_auth_token);
+            if (tokens.custom_auth_token)
+              await this.afAuth.signInWithCustomToken(tokens.custom_auth_token);
+          } else {
+            // If there is no code within url and a user exists, refreshes Spotify access token.
+            await this.refreshToken();
+          }
         }),
         first()
       )
       .subscribe();
   }
 
-  // Gets Spotify access code within url.
+  // Open a dialog that will redirect to Spotify auth and will login to Firebase.
+  private openLoginDialog(): void {
+    const dialogRef = this.dialog.open(DialogComponent, {
+      width: this.dialogWidth,
+      maxWidth: this.dialogWidth,
+      height: this.dialogHeight,
+      maxHeight: this.dialogHeight,
+    });
+    dialogRef.afterClosed().subscribe(async () => {
+      this.authService.authSpotify();
+    });
+  }
+
+  // Get Spotify access code within url.
   private getUrlCode(url: string): string {
     return url.substring(url.indexOf('=') + 1);
   }
 
-  // Pre-loads gifs to avoid glitches.
+  // Pre-load gifs to avoid glitches.
   private loadGifs() {
     for (let i = 0; i < this.gifs.length; i++) {
       let gif = new Image();
@@ -175,19 +192,6 @@ export class HomepageComponent implements OnInit, OnDestroy {
     if (event.key === ' ') {
       this.play();
     }
-  }
-
-  // Opens a dialog that will redirect to Spotify auth and will login to Firebase.
-  private openLoginDialog(): void {
-    const dialogRef = this.dialog.open(DialogComponent, {
-      width: this.dialogWidth,
-      maxWidth: this.dialogWidth,
-      height: this.dialogHeight,
-      maxHeight: this.dialogHeight,
-    });
-    dialogRef.afterClosed().subscribe(async () => {
-      await this.authService.anonymousLogin();
-    });
   }
 
   // Shuffles tracks using Fisher Yates modern algorithm.

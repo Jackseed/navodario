@@ -53,3 +53,6 @@ functions/ui-debug.log
 ui-debug.log
 firestore-debug.log
 .runtimeconfig.json
+functions/service-account.json
+functions/service-account-dev.json
+functions/service-account-prod.json

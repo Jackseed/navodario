@@ -32,7 +32,6 @@ export class SpotifyService {
     // @ts-ignore: Unreachable code error
     const { Player } = await this.waitForSpotifyWebPlaybackSDKToLoad();
     const user = await this.authService.getUser();
-
     const player = new Player({
       name: 'Nova Jukebox',
       getOAuthToken: async (callback: any) => {
@@ -46,7 +45,7 @@ export class SpotifyService {
 
     // Sets device id
     player.addListener('ready', async ({ device_id }) => {
-      await this.saveDeviceId(user.id, device_id);
+      await this.saveDeviceId(user.uid, device_id);
 
       console.log('Device ready', device_id);
 
@@ -157,18 +156,18 @@ export class SpotifyService {
   //--------------------------------
   //             TOKEN            //
   //--------------------------------
-  // Gets & saves access token if code as param, otherwise refreshes.
+  // Get & save access token if code as param, otherwise refresh.
   public async getToken(code?: string): Promise<Tokens> {
     const user = await this.authService.getUser();
     const getTokenFunction = this.fns.httpsCallable('getSpotifyToken');
     let param: Object;
 
     code
-      ? (param = { code: code, tokenType: 'access', userId: user.id })
+      ? (param = { code: code, tokenType: 'access' })
       : (param = {
           tokenType: 'refresh',
           refreshToken: user.tokens.refresh,
-          userId: user.id,
+          userId: user.uid,
         });
 
     return getTokenFunction(param).pipe(first()).toPromise();
