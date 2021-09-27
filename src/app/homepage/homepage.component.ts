@@ -1,10 +1,10 @@
 // Angular
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { NavigationEnd, Router, RouterEvent } from '@angular/router';
+import { NavigationEnd, Router, Scroll } from '@angular/router';
 // Angularfire
 import { AngularFireAuth } from '@angular/fire/auth';
 // Rxjs
-import { Subscription } from 'rxjs';
+import { combineLatest, Subscription } from 'rxjs';
 import { filter, first, map, tap } from 'rxjs/operators';
 // Flex layout
 import { MediaObserver, MediaChange } from '@angular/flex-layout';
@@ -71,41 +71,62 @@ export class HomepageComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadGifs();
-    // If user isn't connected, opens dialog to create one.
-    this.afAuth.user
-      .pipe(
-        filter((user) => !!!user),
-        tap((_) => this.openLoginDialog()),
-        first()
-      )
-      .subscribe();
 
-    // Checks for a code within url to know if it's a first connexion.
-    this.router.events
+    // Signup / refresh token process.
+    combineLatest([this.afAuth.user, this.router.events])
       .pipe(
-        // Waits for redirection to be ended before checking url for a Spotify access code.
-        filter((event) => event instanceof NavigationEnd),
-        tap(async (event: RouterEvent) => {
-          const user = await this.authService.getUser();
-          if (user)
-            event.url.includes('code')
-              ? await this.getAccessTokenWithCode(this.getUrlCode(event.url))
-              : // If there is no code within url and a user exists, refreshes Spotify access token.
-              user.tokens
-              ? await this.refreshToken()
-              : this.openLoginDialog();
+        // Wait for redirection to be ended before checking url for a Spotify access code.
+        filter(
+          ([user, event]) =>
+            (event as Scroll).routerEvent instanceof NavigationEnd
+        ),
+        tap(async ([user, event]) => {
+          if (user) {
+            // If a user exists, refreshes Spotify access token.
+            await this.refreshToken();
+            return;
+          }
+          const url = (event as Scroll).routerEvent.url;
+          // If there is an access code within URL, creates a user.
+          if (url.includes('code')) {
+            const tokens = await this.getAccessTokenWithCode(
+              this.getUrlCode(url)
+            );
+            if (tokens.custom_auth_token) {
+              await this.afAuth.signInWithCustomToken(tokens.custom_auth_token);
+              // Reset the process if there is a code but user isn't connected.
+            } else {
+              this.openLoginDialog();
+            }
+            // If user isn't connected and there is no code within url, opens dialog to create one.
+          } else {
+            this.openLoginDialog();
+          }
         }),
         first()
       )
       .subscribe();
   }
 
-  // Gets Spotify access code within url.
+  // Open a dialog that will redirect to Spotify auth and will login to Firebase.
+  private openLoginDialog(): void {
+    const dialogRef = this.dialog.open(DialogComponent, {
+      width: this.dialogWidth,
+      maxWidth: this.dialogWidth,
+      height: this.dialogHeight,
+      maxHeight: this.dialogHeight,
+    });
+    dialogRef.afterClosed().subscribe(async () => {
+      this.authService.authSpotify();
+    });
+  }
+
+  // Get Spotify access code within url.
   private getUrlCode(url: string): string {
     return url.substring(url.indexOf('=') + 1);
   }
 
-  // Pre-loads gifs to avoid glitches.
+  // Pre-load gifs to avoid glitches.
   private loadGifs() {
     for (let i = 0; i < this.gifs.length; i++) {
       let gif = new Image();
@@ -175,19 +196,6 @@ export class HomepageComponent implements OnInit, OnDestroy {
     if (event.key === ' ') {
       this.play();
     }
-  }
-
-  // Opens a dialog that will redirect to Spotify auth and will login to Firebase.
-  private openLoginDialog(): void {
-    const dialogRef = this.dialog.open(DialogComponent, {
-      width: this.dialogWidth,
-      maxWidth: this.dialogWidth,
-      height: this.dialogHeight,
-      maxHeight: this.dialogHeight,
-    });
-    dialogRef.afterClosed().subscribe(async () => {
-      await this.authService.anonymousLogin();
-    });
   }
 
   // Shuffles tracks using Fisher Yates modern algorithm.

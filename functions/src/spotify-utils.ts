@@ -26,7 +26,7 @@ export async function saveTracksToPlaylist(
         res = `response status: ${response.status}`;
       },
       (error: any) => {
-        console.log('error: ', error);
+        console.log(error.response.data);
         res = `error: ${error}`;
       }
     );
@@ -63,7 +63,7 @@ export async function getPlaylistLastTrackIds(
       lastTracks.push(response.data.items);
     },
     (error: any) => {
-      console.log('error: ', error);
+      console.log(error.response.data);
     }
   );
 
@@ -92,7 +92,7 @@ export async function getPlaylistTracks(req: any, res: any) {
     .then((response: any) => {
       playlist = response.data;
     })
-    .catch((error: any) => console.log(error));
+    .catch((error: any) => console.log(error.response.data));
 
   let allPlaylistTracks: any[] = [];
   const playlistTracksLimit = 100;
@@ -185,7 +185,7 @@ export async function getPlaylistTracks(req: any, res: any) {
       tracks: allPlaylistTracks,
     },
     method: 'POST',
-  }).catch((err: any) => console.log('error: ', err));
+  }).catch((error: any) => console.log(error.response.data));
 
   // Extracts uris for deleting afterwards.
   const uris = allPlaylistTracks.map((track) => {

@@ -25,7 +25,7 @@ export async function saveTracks(req: any, res: any) {
     await batch
       .commit()
       .then((_: any) => console.log(`batch of ${i} saved`))
-      .catch((error: any) => console.log(error));
+      .catch((error: any) => console.log(error.response.data));
   }
   res.json({
     result: `Tracks successfully saved on Firestore, total tracks: ${tracks.length}.`,
@@ -60,4 +60,47 @@ export async function saveToken(req: any, res: any) {
   } else {
     res.json({ result: `Empty token.` });
   }
+}
+
+export async function createFirebaseAccount(
+  uid: string,
+  displayName: string,
+  email: string
+): Promise<string> {
+  const dbTask = admin.firestore().collection('users').doc(uid).set(
+    {
+      uid,
+      displayName,
+      email,
+      emailVerified: true,
+    },
+    { merge: true }
+  );
+  // Create or update the user account.
+  const authTask = admin
+    .auth()
+    .updateUser(uid, {
+      displayName,
+      email,
+      emailVerified: true,
+    })
+    .catch((error) => {
+      // If user does not exists we create it.
+      if (error.code === 'auth/user-not-found') {
+        return admin.auth().createUser({
+          uid,
+          displayName,
+          email,
+          emailVerified: true,
+        });
+      }
+      throw error;
+    });
+  // Wait for all async tasks to complete, then generate and return a custom auth token.
+  await Promise.all([dbTask, authTask]);
+
+  // Create a Firebase custom auth token.
+  const custom_auth_token = await admin.auth().createCustomToken(uid);
+  
+  return custom_auth_token;
 }

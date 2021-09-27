@@ -10,7 +10,12 @@ import { saveAndRestore } from './save-and-restore';
 import { getPlaylistTracks } from './spotify-utils';
 import { saveTracks, saveToken } from './firestore-utils';
 import { getSpotifyToken } from './spotify-auth';
-admin.initializeApp();
+const serviceAccount = require(functions.config().internal.id);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: `https://${process.env.GCLOUD_PROJECT}.firebaseio.com`,
+});
 
 //--------------------------------
 //    Saves Nova every 5min     //
