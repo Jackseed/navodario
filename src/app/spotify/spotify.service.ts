@@ -12,6 +12,7 @@ import { first } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 // Models
 import { Devices, Tokens, Track, WebPlaybackState } from './spotify.model';
+import { User } from '../auth/auth.model';
 
 @Injectable({
   providedIn: 'root',
@@ -28,10 +29,9 @@ export class SpotifyService {
   //--------------------------------
   //            PLAYER            //
   //--------------------------------
-  public async initializePlayer(trackUris?: string[]) {
+  public async initializePlayer(user: User, trackUris?: string[]) {
     // @ts-ignore: Unreachable code error
     const { Player } = await this.waitForSpotifyWebPlaybackSDKToLoad();
-    const user = await this.authService.getUser();
     const player = new Player({
       name: 'Nova Jukebox',
       getOAuthToken: async (callback: any) => {
@@ -41,32 +41,15 @@ export class SpotifyService {
       },
     });
 
-    await player.connect();
+    player.connect();
 
     // Sets device id
     player.addListener('ready', async ({ device_id }) => {
-      await this.saveDeviceId(user.uid, device_id);
+      this.saveDeviceId(user.uid, device_id);
 
       console.log('Device ready', device_id);
 
-      if (trackUris) this.playSpotify(trackUris);
-    });
-
-    player.addListener('not_ready', ({ device_id }) => {
-      console.log('Device ID has gone offline', device_id);
-      this.initializePlayer();
-    });
-
-    player.addListener('initialization_error', ({ message }) => {
-      console.error(message);
-    });
-
-    player.addListener('authentication_error', ({ message }) => {
-      console.error(message);
-    });
-
-    player.addListener('account_error', ({ message }) => {
-      console.error(message);
+      if (trackUris) this.playSpotify(trackUris, device_id);
     });
 
     // Sets page title on track change.
@@ -98,20 +81,26 @@ export class SpotifyService {
   //--------------------------------
   //             PLAY             //
   //--------------------------------
-  public async playSpotify(trackUris: string[]): Promise<void> {
-    let user = await this.authService.getUser();
-    let deviceId = user.deviceId;
+  public async playSpotify(
+    trackUris: string[],
+    newDeviceId?: string
+  ): Promise<void> {
+    let deviceId = newDeviceId ? newDeviceId : '';
 
-    // Verifies that deviceId is still valid, otherwise updates it and relaunch play.
-    const deviceExists = await this.isDeviceExisting();
-    if (!deviceExists) {
-      await this.initializePlayer(trackUris);
-      return;
+    // Verifies user device if no new device id is attached.
+    if (!newDeviceId) {
+      let user = await this.authService.getUser();
+      deviceId = user.deviceId;
+
+      // Verifies that deviceId is still valid, otherwise updates it and relaunches play.
+      const deviceExists = await this.isDeviceExisting(user);
+      if (!deviceExists) {
+        await this.initializePlayer(user, trackUris);
+        return;
+      }
     }
-
     // Prepares and sends play request.
     trackUris = this.limitTrackAmount(trackUris);
-
     const baseUrl = 'https://api.spotify.com/v1/me/player/play';
     const body = { uris: trackUris };
     const queryParam = `?device_id=${deviceId}`;
@@ -132,9 +121,8 @@ export class SpotifyService {
     return this.afs.collection('users').doc(userId).update({ deviceId });
   }
 
-  private async isDeviceExisting(): Promise<boolean> {
+  private async isDeviceExisting(user: User): Promise<boolean> {
     const devices = await this.userAvailableDevices();
-    const user = await this.authService.getUser();
 
     let deviceExists = false;
     devices.devices.forEach((device) => {
