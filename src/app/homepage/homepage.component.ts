@@ -1,10 +1,10 @@
 // Angular
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { NavigationEnd, Router, RouterEvent } from '@angular/router';
+import { NavigationEnd, Router, Scroll } from '@angular/router';
 // Angularfire
 import { AngularFireAuth } from '@angular/fire/auth';
 // Rxjs
-import { Subscription } from 'rxjs';
+import { combineLatest, Subscription } from 'rxjs';
 import { filter, first, map, tap } from 'rxjs/operators';
 // Flex layout
 import { MediaObserver, MediaChange } from '@angular/flex-layout';
@@ -71,32 +71,36 @@ export class HomepageComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadGifs();
-    // If user isn't connected, opens dialog to create one.
-    this.afAuth.user
-      .pipe(
-        filter((user) => !!!user),
-        tap((_) => this.openLoginDialog()),
-        first()
-      )
-      .subscribe();
 
-    this.afAuth.authState.subscribe((_) => console.log(_.uid));
-    // Checks for a code within url to know if it's a first connexion.
-    this.router.events
+    // Signup / refresh token process.
+    combineLatest([this.afAuth.user, this.router.events])
       .pipe(
-        // Waits for redirection to be ended before checking url for a Spotify access code.
-        filter((event) => event instanceof NavigationEnd),
-        tap(async (event: RouterEvent) => {
-          if (event.url.includes('code')) {
-            const tokens = await this.getAccessTokenWithCode(
-              this.getUrlCode(event.url)
-            );
-            console.log(tokens.custom_auth_token);
-            if (tokens.custom_auth_token)
-              await this.afAuth.signInWithCustomToken(tokens.custom_auth_token);
-          } else {
-            // If there is no code within url and a user exists, refreshes Spotify access token.
+        // Wait for redirection to be ended before checking url for a Spotify access code.
+        filter(
+          ([user, event]) =>
+            (event as Scroll).routerEvent instanceof NavigationEnd
+        ),
+        tap(async ([user, event]) => {
+          if (user) {
+            // If a user exists, refreshes Spotify access token.
             await this.refreshToken();
+            return;
+          }
+          const url = (event as Scroll).routerEvent.url;
+          // If there is an access code within URL, creates a user.
+          if (url.includes('code')) {
+            const tokens = await this.getAccessTokenWithCode(
+              this.getUrlCode(url)
+            );
+            if (tokens.custom_auth_token) {
+              await this.afAuth.signInWithCustomToken(tokens.custom_auth_token);
+              // Reset the process if there is a code but user isn't connected.
+            } else {
+              this.openLoginDialog();
+            }
+            // If user isn't connected and there is no code within url, opens dialog to create one.
+          } else {
+            this.openLoginDialog();
           }
         }),
         first()
