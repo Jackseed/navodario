@@ -40,7 +40,7 @@ export async function saveAndRestore(): Promise<any> {
             `${playlistUris[response.data.playlistId].length} tracks saved.`
           );
         })
-        .catch((err: any) => console.log('Something broke: ', err));
+        .catch((err: any) => console.log('Something broke: ', err.response.data));
     })
   )
     .then(async () => {
@@ -71,7 +71,7 @@ export async function saveAndRestore(): Promise<any> {
               console.log(`tracks deleted.`);
             })
             .catch((err: any) =>
-              console.log('Something broke when deleting: ', err)
+              console.log('Something broke when deleting: ', err.response.data)
             );
         })
       )
@@ -79,8 +79,8 @@ export async function saveAndRestore(): Promise<any> {
           console.log('Every playlist tracks deleted.');
         })
         .catch((err) =>
-          console.log('something went wrong when trying to delete.. ', err)
+          console.log('something went wrong when trying to delete.. ', err.response.data)
         );
     })
-    .catch((err) => console.log('something went wrong.. ', err));
+    .catch((err) => console.log('something went wrong.. ', err.response.data));
 }

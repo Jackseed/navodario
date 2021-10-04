@@ -34,13 +34,13 @@ export async function scrapeAndSaveAllNovaChannels() {
         .then((response: any) => {
           console.log('promises well sent');
         })
-        .catch((err: any) => console.log('Something broke!', err));
+        .catch((err: any) => console.log('Something broke!', err.response.data));
     })
   )
     .then(() => {
       console.log('All good!');
     })
-    .catch((err) => console.log('something went wrong.. ', err));
+    .catch((err) => console.log('something went wrong.. ', err.response.data));
 }
 
 //--------------------------------

@@ -165,13 +165,15 @@ export async function getPlaylistTracks(req: any, res: any) {
 
           console.log(`loading batch ${index}`);
         })
-        .catch((err: any) => console.log('Something broke: ', err));
+        .catch((err: any) =>
+          console.log('Something broke: ', err.response.data)
+        );
     })
   )
     .then(() => {
       console.log('All batch loaded.');
     })
-    .catch((err) => console.log('something went wrong.. ', err));
+    .catch((err) => console.log('something went wrong.. ', err.response.data));
 
   if (req.body.start - req.body.end)
     allPlaylistTracks = allPlaylistTracks.slice(req.body.start, req.body.end);

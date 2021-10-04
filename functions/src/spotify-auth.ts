@@ -71,7 +71,7 @@ export async function getSpotifyToken(data: any) {
           email
         );
       })
-      .catch((error: any) => console.log(error));
+      .catch((error: any) => console.log(error.response.data));
   }
 
   // Saves tokens on Firestore.
@@ -87,7 +87,7 @@ export async function getSpotifyToken(data: any) {
       userId,
     },
     method: 'POST',
-  }).catch((err: any) => console.log('error: ', err));
+  }).catch((err: any) => console.log('error: ', err.response.data));
 
   return { token, refresh_token, custom_auth_token };
 }

@@ -50,7 +50,7 @@ export async function deletePlaylistTracks(req: any, res: any) {
           `${uris.length} tracks deleted from playlist ${playlistId}`
         );
       })
-      .catch((err) => console.log('something went wrong.. ', err));
+      .catch((err) => console.log('something went wrong.. ', err.response.data));
   }
 
   res.status(200).send();
