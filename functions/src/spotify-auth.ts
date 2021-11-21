@@ -1,4 +1,3 @@
-/* eslint-disable */
 import functions = require('firebase-functions');
 import { createFirebaseAccount } from './firestore-utils';
 const axios = require('axios').default;

@@ -1,4 +1,3 @@
-/* eslint-disable */
 import puppeteer = require('puppeteer');
 import { nova, limitTracksToCheck } from './data/types';
 import { saveTracksToPlaylist, getPlaylistLastTrackIds } from './spotify-utils';

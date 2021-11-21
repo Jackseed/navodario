@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { nova } from './data/types';
 const axios = require('axios').default;
 

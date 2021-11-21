@@ -81,8 +81,8 @@ export class HomepageComponent implements OnInit, OnDestroy {
             (event as Scroll).routerEvent instanceof NavigationEnd
         ),
         tap(async ([user, event]) => {
+          // If a user exists, refreshes Spotify access token.
           if (user) {
-            // If a user exists, refreshes Spotify access token.
             await this.refreshToken();
             return;
           }

@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { getSpotifyAuthHeaders } from './spotify-auth';
 const axios = require('axios').default;
 

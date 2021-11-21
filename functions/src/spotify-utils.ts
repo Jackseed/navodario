@@ -1,4 +1,3 @@
-/* eslint-disable */
 const axios = require('axios').default;
 import { getSpotifyAuthHeaders } from './spotify-auth';
 
@@ -177,7 +176,7 @@ export async function getPlaylistTracks(req: any, res: any) {
 
   if (req.body.start - req.body.end)
     allPlaylistTracks = allPlaylistTracks.slice(req.body.start, req.body.end);
-  // Saves tracks on Firestore.
+  // Saves tracks to Firestore.
   await axios({
     headers: {
       'Content-Type': 'application/json',

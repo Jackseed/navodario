@@ -1,4 +1,3 @@
-/* eslint-disable */
 import admin = require('firebase-admin');
 
 //--------------------------------
@@ -62,6 +61,9 @@ export async function saveToken(req: any, res: any) {
   }
 }
 
+//--------------------------------
+//   CREATES FIREBASE ACCOUNT   //
+//--------------------------------
 export async function createFirebaseAccount(
   uid: string,
   displayName: string,
@@ -76,7 +78,7 @@ export async function createFirebaseAccount(
     },
     { merge: true }
   );
-  // Create or update the user account.
+  // Creates or update the user account.
   const authTask = admin
     .auth()
     .updateUser(uid, {
@@ -96,11 +98,11 @@ export async function createFirebaseAccount(
       }
       throw error;
     });
-  // Wait for all async tasks to complete, then generate and return a custom auth token.
+  // Waits for all async tasks to complete, then generate and return a custom auth token.
   await Promise.all([dbTask, authTask]);
 
-  // Create a Firebase custom auth token.
+  // Creates a Firebase custom auth token.
   const custom_auth_token = await admin.auth().createCustomToken(uid);
-  
+
   return custom_auth_token;
 }

@@ -1,4 +1,3 @@
-/* eslint-disable */
 import functions = require('firebase-functions');
 import admin = require('firebase-admin');
 import { deletePlaylistTracks } from './delete-playlist-tracks';
