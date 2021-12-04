@@ -5,7 +5,7 @@ export const environment = {
     apiUrl: 'https://api.spotify.com/v1/me',
     clientId: 'ef247ad2b6a6480ab274d9f32b27dfe9',
     responseType: 'code',
-    redirectURI: 'https://nova-jukebox.web.app/',
+    redirectURI: 'https://nova-jukebox.com/',
   },
   firebaseConfig: {
     apiKey: 'AIzaSyBc4oEqQ_J5vJIyZys630Z3RCQpZJn2E9o',

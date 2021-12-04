@@ -36,10 +36,14 @@ export async function saveAndRestore(): Promise<any> {
             response.data.playlistId
           ].concat(response.data.uris);
           console.log(
-            `${playlistUris[response.data.playlistId].length} tracks saved.`
+            `${
+              playlistUris[response.data.playlistId].length
+            } tracks saved from playlist ${response.data.playlistId}.`
           );
         })
-        .catch((err: any) => console.log('Something broke: ', err.response.data));
+        .catch((err: any) =>
+          console.log('Something broke: ', err.response.data)
+        );
     })
   )
     .then(async () => {
@@ -52,7 +56,7 @@ export async function saveAndRestore(): Promise<any> {
           headers: {
             'Content-Type': 'application/json',
           },
-          url: 'https://us-central1-nova-jukebox.cloudfunctions.net/deleteTracks',
+          url: 'https://us-central1-nova-jukebox.cloudfunctions.net/deletePlaylistTracks',
           data: {
             playlistId: channel.playlistId,
             uris: playlistUris[channel.playlistId],
@@ -78,7 +82,10 @@ export async function saveAndRestore(): Promise<any> {
           console.log('Every playlist tracks deleted.');
         })
         .catch((err) =>
-          console.log('something went wrong when trying to delete.. ', err.response.data)
+          console.log(
+            'something went wrong when trying to delete.. ',
+            err.response.data
+          )
         );
     })
     .catch((err) => console.log('something went wrong.. ', err.response.data));
