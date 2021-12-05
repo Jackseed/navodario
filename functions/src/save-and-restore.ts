@@ -1,3 +1,4 @@
+import functions = require('firebase-functions');
 import { nova } from './data/types';
 const axios = require('axios').default;
 
@@ -17,7 +18,7 @@ export async function saveAndRestore(): Promise<any> {
       headers: {
         'Content-Type': 'application/json',
       },
-      url: 'https://us-central1-nova-jukebox.cloudfunctions.net/getPlaylistTracks',
+      url: functions.config().functions.getplaylisttracks,
       data: {
         playlistId: channel.playlistId,
         novaChannel: channel.novaChannel,
@@ -56,7 +57,7 @@ export async function saveAndRestore(): Promise<any> {
           headers: {
             'Content-Type': 'application/json',
           },
-          url: 'https://us-central1-nova-jukebox.cloudfunctions.net/deletePlaylistTracks',
+          url: functions.config().functions.deleteplaylisttracks,
           data: {
             playlistId: channel.playlistId,
             uris: playlistUris[channel.playlistId],

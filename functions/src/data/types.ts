@@ -1,28 +1,28 @@
-/* eslint-disable */
+import functions = require('firebase-functions');
 export const nova = [
   {
     novaChannel: 'Radio Nova',
-    playlistId: '5n4YjXr8CReTshU81kTIJd',
+    playlistId: functions.config().nova.radio,
     frequence: '910',
   },
   {
     novaChannel: 'Nouvo nova',
-    playlistId: '3MRJIbMsOLRn4Hd5w1J5By',
+    playlistId: functions.config().nova.nouvo,
     frequence: '79676',
   },
   {
     novaChannel: 'Nova la nuit',
-    playlistId: '3p5vpBknVeAp4RYguJc73H',
+    playlistId: functions.config().nova.nuit,
     frequence: '916',
   },
   {
     novaChannel: 'Nova classics',
-    playlistId: '0AWDMBAIptCWKCMYlbHA1D',
+    playlistId: functions.config().nova.classics,
     frequence: '913',
   },
   {
     novaChannel: 'Nova danse',
-    playlistId: '4HpjRXEpxG5UEdOrk7FVFS',
+    playlistId: functions.config().nova.danse,
     frequence: '560',
   },
 ];

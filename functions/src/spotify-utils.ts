@@ -1,3 +1,4 @@
+import functions = require('firebase-functions');
 const axios = require('axios').default;
 import { getSpotifyAuthHeaders } from './spotify-auth';
 
@@ -181,7 +182,7 @@ export async function getPlaylistTracks(req: any, res: any) {
     headers: {
       'Content-Type': 'application/json',
     },
-    url: 'https://us-central1-nova-jukebox.cloudfunctions.net/saveTracks',
+    url: functions.config().functions.savetracks,
     data: {
       tracks: allPlaylistTracks,
     },

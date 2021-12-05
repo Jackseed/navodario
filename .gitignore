@@ -56,3 +56,4 @@ firestore-debug.log
 functions/service-account.json
 functions/service-account-dev.json
 functions/service-account-prod.json
+functions/service-account-emulator.json

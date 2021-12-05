@@ -1,4 +1,5 @@
 import puppeteer = require('puppeteer');
+import functions = require('firebase-functions');
 import { nova, limitTracksToCheck } from './data/types';
 import { saveTracksToPlaylist, getPlaylistLastTrackIds } from './spotify-utils';
 import { getSpotifyAuthHeaders } from './spotify-auth';
@@ -16,7 +17,7 @@ export async function scrapeAndSaveAllNovaChannels() {
       headers: {
         'Content-Type': 'application/json',
       },
-      url: 'https://us-central1-nova-jukebox.cloudfunctions.net/saveNovaOnSpotify',
+      url: functions.config().functions.savenovaonspotify,
       data: {
         playlistId: channel.playlistId,
         frequence: channel.frequence,
@@ -33,7 +34,9 @@ export async function scrapeAndSaveAllNovaChannels() {
         .then((response: any) => {
           console.log('promises well sent');
         })
-        .catch((err: any) => console.log('Something broke!', err.response.data));
+        .catch((err: any) =>
+          console.log('Something broke!', err.response.data)
+        );
     })
   )
     .then(() => {

@@ -46,9 +46,6 @@ export class SpotifyService {
     // Sets device id
     player.addListener('ready', async ({ device_id }) => {
       this.saveDeviceId(user.uid, device_id);
-
-      console.log('Device ready', device_id);
-
       if (trackUris) this.playSpotify(trackUris, device_id);
     });
 

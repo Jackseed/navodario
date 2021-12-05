@@ -11,7 +11,6 @@ export async function deletePlaylistTracks(req: any, res: any) {
   const playlistId = req.body.playlistId;
   const tracksLimit = 100;
   let batchRequests: Promise<Object>[] = [];
-
   // Deletes tracks from playlist.
   if (uris.length > 0) {
     // Creates batches of requests to respect Spotify limit.

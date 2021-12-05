@@ -10,15 +10,17 @@ import { HomepageComponent } from './homepage/homepage.component';
 import { DialogComponent } from './dialog/dialog.component';
 // Angular fire
 import { AngularFireModule } from '@angular/fire';
-
-import { USE_EMULATOR as USE_FUNCTIONS_EMULATOR } from '@angular/fire/functions';
+import { AngularFireAuth } from '@angular/fire/auth';
+import { SETTINGS } from '@angular/fire/firestore';
+import { ORIGIN as FUNCTIONS_ORIGIN } from '@angular/fire/functions';
+import { USE_EMULATOR as AUTH_EMULATOR } from '@angular/fire/auth';
 // Material
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { HttpClientModule } from '@angular/common/http';
 // Sentry
 import * as Sentry from '@sentry/browser';
-import { AngularFireAuth } from '@angular/fire/auth';
+// RxJs
 import { first } from 'rxjs/operators';
 
 Sentry.init({
@@ -62,8 +64,18 @@ export class SentryErrorHandler implements ErrorHandler {
     },
 
     {
-      provide: USE_FUNCTIONS_EMULATOR,
-      useValue: environment.useEmulators ? ['localhost', 5001] : undefined,
+      provide: SETTINGS,
+      useValue: environment.useEmulators
+        ? { host: 'localhost:8080', ssl: false }
+        : {},
+    },
+    {
+      provide: FUNCTIONS_ORIGIN,
+      useValue: environment.useEmulators ? 'http://localhost:5001' : undefined,
+    },
+    {
+      provide: AUTH_EMULATOR,
+      useValue: environment.useEmulators ? ['localhost', 9099] : undefined,
     },
   ],
   bootstrap: [AppComponent],

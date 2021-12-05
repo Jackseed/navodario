@@ -78,7 +78,7 @@ export async function getSpotifyToken(data: any) {
     headers: {
       'Content-Type': 'application/json',
     },
-    url: functions.config().spotify.savetokenfunction,
+    url: functions.config().functions.savetoken,
     data: {
       token,
       refreshToken: refresh_token,
