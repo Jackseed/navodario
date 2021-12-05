@@ -12,7 +12,10 @@ import { DialogComponent } from './dialog/dialog.component';
 import { AngularFireModule } from '@angular/fire';
 import { AngularFireAuth } from '@angular/fire/auth';
 import { SETTINGS } from '@angular/fire/firestore';
-import { ORIGIN as FUNCTIONS_ORIGIN } from '@angular/fire/functions';
+import {
+  ORIGIN as FUNCTIONS_ORIGIN,
+  USE_EMULATOR,
+} from '@angular/fire/functions';
 import { USE_EMULATOR as AUTH_EMULATOR } from '@angular/fire/auth';
 // Material
 import { MatDialogModule } from '@angular/material/dialog';
@@ -63,7 +66,7 @@ export class SentryErrorHandler implements ErrorHandler {
       useClass: SentryErrorHandler,
     },
 
-    {
+    /*   {
       provide: SETTINGS,
       useValue: environment.useEmulators
         ? { host: 'localhost:8080', ssl: false }
@@ -73,10 +76,11 @@ export class SentryErrorHandler implements ErrorHandler {
       provide: FUNCTIONS_ORIGIN,
       useValue: environment.useEmulators ? 'http://localhost:5001' : undefined,
     },
+    { provide: USE_EMULATOR, useValue: ['localhost', 5001] },
     {
       provide: AUTH_EMULATOR,
       useValue: environment.useEmulators ? ['localhost', 9099] : undefined,
-    },
+    }, */
   ],
   bootstrap: [AppComponent],
 })

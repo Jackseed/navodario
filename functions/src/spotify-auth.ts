@@ -124,10 +124,13 @@ export async function getSpotifyAuthHeaders(): Promise<Object> {
         token = response.data.access_token;
       },
       (error: any) => {
-        console.log(error.response.data);
+        console.log(
+          'Error while refreshing access token: ',
+          error.response.data
+        );
       }
     );
-
+    
   // Builds http header.
   const headers = {
     Authorization: `Bearer ${token}`,
